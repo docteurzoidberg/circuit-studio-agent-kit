@@ -9,10 +9,15 @@
 > 1. Wait for #6 to be settled, then rebase on what lands: if the maintainer merges #6, rebase on `main`; if he
 >    implements the presentation block his own way, adapt `resolveVideoSettings()` to his block (or drop that
 >    part if there is none).
-> 2. Check the API end to end on a production build (`npm run build && npx vite preview`), driven from outside
->    like a user's script: `openProject` with a fixture, `listParts`, `renderImage`, a short `renderVideo` checked
->    with `ffprobe`. The tool-changes plan asked for it; the branch has only unit tests so far.
-> 3. Fill in the verification section below with what was actually run, and the issue and pull request numbers.
+> 2. Squash the local `fixup!` commit `65a135c` into the API commit (projectFiles loaded on demand, found by the
+>    end-to-end check below), then push the fork branch.
+> 3. Fill in the issue and pull request numbers.
+>
+> **End-to-end check done on 2026-11-16** (fork `8f4db3d` + `65a135c`, `npm run build && npx vite preview`, Chrome
+> driven through the DevTools protocol, fresh profile): see the verification section of the pull request. It also
+> showed a probable upstream bug when opening the repository's own fixture, listed as bug 6 in
+> [../upstream-bugs.md](../upstream-bugs.md); the check worked around it by completing the fixture's part geometry
+> from the parts bin.
 >
 > Issue and pull request are published together, as for #5 and #6: the maintainer merges or implements his way.
 
@@ -92,7 +97,8 @@ the raw scene.
 
 Changes:
 
-- `src/automation.ts` (new): the API, `listAutomationParts()`, `resolveVideoSettings()`.
+- `src/automation.ts` (new): the API, `listAutomationParts()`, `resolveVideoSettings()`; it loads `projectFiles` on
+  demand, as the app does.
 - `src/main.tsx`: installs the API.
 - `src/Workspace.tsx`: `renderScenePng()` split out of `exportScenePng()` (which still downloads), and
   `wireRoutesReady()` so scripts can wait for the routing worker.
@@ -103,7 +109,13 @@ Changes:
 Verification:
 
 - `npx tsc -b` passes; the 5 new tests pass; `npx vitest run` shows the same 35 unrelated failures as on `main`.
-- <End-to-end check on a production build, to fill in before publishing.>
+- End to end on a production build (`npm run build && npx vite preview`), driven from outside through the Chrome
+  DevTools protocol in a fresh profile, with `tests/fixtures/crowded-c6-project.json` (8 parts, 28 wires):
+  `openProject` accepts the object, its JSON text and a `Blob`, and resolves once the models and the 28 routes
+  are in place (10 s); `listParts()` returns the 12 built-in parts with their pins; `capabilities()` reports MP4,
+  WebM and PNG; `renderImage()` returns a PNG; `renderVideo({mode: 'orbit', fps: 24})` returns an MP4 checked
+  with `ffprobe`: H.264, 1920 × 1080, 24 fps, 90 frames, 3.75 s, every model and wire visible.
+- `npm run build` adds no warning (a static import of `projectFiles` was made dynamic for that).
 
 Reproduce locally (Node 22):
 
