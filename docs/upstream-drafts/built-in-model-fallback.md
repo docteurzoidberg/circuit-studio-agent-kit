@@ -1,7 +1,7 @@
 # Built-in model fallback for reference-free geometries (follow-up to #3)
 
-> **Not published yet.** Fork branch `fix/built-in-model-fallback` (one commit, `a2ef47a`, on upstream `1713780`;
-> local until published). Bug proven on the deployed site and fix tested on 2026-11-16 (bug 6 in
+> **Published 2026-11-16** as pull request [#7](https://github.com/arslansadiq87/circuit-studio/pull/7) and a [comment](https://github.com/arslansadiq87/circuit-studio/issues/3#issuecomment-6928191181) on [#3](https://github.com/arslansadiq87/circuit-studio/issues/3). Fork branch `fix/built-in-model-fallback`
+> (one commit, `a2ef47a`, on upstream `1713780`). Bug proven on the deployed site and fix tested on 2026-11-16 (bug 6 in
 > [../upstream-bugs.md](../upstream-bugs.md)). Plan: a short comment on the closed issue #3 pointing at a new pull
 > request; the maintainer merges it or fixes it his own way.
 
@@ -17,7 +17,7 @@ Thanks again for 1713780. One case still slips through, on the deployed site (bu
 
 These components have a `geometry` of kind `model` without `modelUrl`, `lodUrls` or `modelAssetId`, and
 `modelUrl()` falls back to the built-in geometry only when `geometry` is missing; the existing test checks that
-case only. I opened #<pr> with a fix and a test on the fixture's real geometry; feel free to merge it or to fix it
+case only. I opened #7 with a fix and a test on the fixture's real geometry; feel free to merge it or to fix it
 your own way.
 
 ## Pull request

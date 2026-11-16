@@ -186,7 +186,7 @@ Last update: 2026-11-16. Resume from here.
 
 ### Next steps
 
-1. **Follow upstream** at the start of each session: state of #1 to #6, review comments, rebase the fork
+1. **Follow upstream** at the start of each session: state of #1 to #7, review comments, rebase the fork
    branches if `main` moved; update the README State column and docs/upstream-contributions.md.
 2. **Upstream changes**: the maintainer fixed #1 and #3 himself in `1713780` (#2 and #4 closed); Presentation in
    project proposed on 2026-11-16 as issue #5 and pull request #6 (the maintainer merges it or implements it his
