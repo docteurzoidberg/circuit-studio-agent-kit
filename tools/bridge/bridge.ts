@@ -64,6 +64,8 @@ export class Bridge {
   port = 0;
   /** Control requests (`POST /__kit/<action>`) from the kit's own commands, when set; they carry `controlToken`. */
   control?: (action: string, body: unknown, progress: (line: string) => void) => Promise<string> | string;
+  /** Called once the current control answer has been sent (e.g. to stop the process after answering `stop`). */
+  afterReply?: () => void;
   controlToken?: string;
 
   constructor(options: BridgeOptions) {
@@ -117,11 +119,15 @@ export class Bridge {
     } catch (error) {
       line({error: (error as Error).message});
     }
-    response.end();
+    response.end(() => {
+      const after = this.afterReply;
+      this.afterReply = undefined;
+      after?.();
+    });
   }
 
   private serveFile(request: IncomingMessage, response: ServerResponse) {
-    const control = new URL(request.url ?? '/', 'http://localhost').pathname.match(/^\/__kit\/([a-z]+)$/);
+    const control = new URL(request.url ?? '/', 'http://localhost').pathname.match(/^\/__kit\/([a-z-]+)$/);
     if (control) {
       void this.serveControl(request, response, control[1]);
       return;

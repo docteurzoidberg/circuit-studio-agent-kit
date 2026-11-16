@@ -17,6 +17,7 @@ import {existsSync, readFileSync, writeFileSync} from 'node:fs';
 import {relative} from 'node:path';
 import type {CatalogSnapshot} from '../catalog/snapshot.ts';
 import {kitPath} from '../project.ts';
+import {readVideo} from '../video/video.ts';
 import {checkWiring, formatReport} from '../wiring/check.ts';
 import {loadEngine, type CsComponent, type CsPin, type CsProject, type CsWire, type Engine, type Triple} from './engine.ts';
 
@@ -420,6 +421,12 @@ export async function build(root: string, options: BuildOptions = {}): Promise<B
     camera: cameraEdited ? previous.camera : camera(components),
     assets,
   };
+  // The video settings chosen for the project (D27), so the page's Auto Video dialog shows them.
+  const video = readVideo(root);
+  if (video.settings) {
+    project.presentation = {...(project.presentation as object ?? {}), video: video.settings,
+      ...(video.scenes ? {cameraScenes: video.scenes} : {})};
+  }
   engine.validate(project);
   const text = `${JSON.stringify(project, null, 1)}\n`;
   if (!options.dryRun) writeFileSync(file, text);

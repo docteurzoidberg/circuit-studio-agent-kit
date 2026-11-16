@@ -17,6 +17,8 @@ mkdirSync(join(build, 'assets'), {recursive: true});
 writeFileSync(join(build, 'index.html'), '<!doctype html><title>Circuit Studio</title>');
 writeFileSync(join(build, 'assets', 'index.js'), "const BRIDGE_PROTOCOL='circuit-studio-bridge/1'");
 process.env.CIRCUIT_STUDIO_KIT_CONFIG = join(temp, 'config');
+// Never a tab in the user's browser, whatever a test asks (background processes inherit it).
+process.env.CIRCUIT_STUDIO_KIT_NO_BROWSER = '1';
 
 const project = (): CsProject => ({
   schemaVersion: 1, name: 'Demo', camera: {position: [0, -100, 200], target: [0, 0, 0]},
@@ -29,11 +31,16 @@ const project = (): CsProject => ({
   assets: {model: 'AAAA'},
 });
 
+const DEFAULTS = {version: 2, mode: 'tutorial', width: 1920, fps: 30, format: 'mp4', backgroundPresetId: 'dark-studio',
+  hudStyle: 'futuristic', labels: 'minimal', overrides: {}};
+const CHOICES: Record<string, unknown[]> = {mode: ['tutorial', 'orbit'], fps: [24, 30, 60]};
+
 /** A fake Circuit Studio page: connects like the real one and answers from a project it holds. */
 async function page(bridge: Bridge, {token = bridge.token, origin = bridge.base.replace(/\/$/, '')} = {}) {
   const ws = new WebSocket(`ws://127.0.0.1:${bridge.port}/bridge`, {origin});
   let held: CsProject | undefined;
   let welcome: {type?: string; client?: string} | undefined;
+  const rendered: unknown[] = [];
   const closed = new Promise<number>(resolve => ws.on('close', code => resolve(code)));
   ws.on('message', data => {
     const message = JSON.parse(String(data));
@@ -46,8 +53,19 @@ async function page(bridge: Bridge, {token = bridge.token, origin = bridge.base.
       held = JSON.parse(params[0]);
       ws.send(JSON.stringify({id, result: {name: held!.name, components: held!.components.length, wires: held!.wires.length}}));
     } else if (method === 'getProject') ws.send(JSON.stringify({id, result: {...held, assets: undefined}}));
-    else if (method === 'capabilities') ws.send(JSON.stringify({id, result: {mp4: true, webm: true, png: true}}));
+    else if (method === 'videoSettings') {
+      // Like Circuit Studio: defaults, then the project's settings, then the given ones; unknown keys dropped and
+      // values out of their list replaced.
+      const stored = (held as {presentation?: {video?: object}}).presentation?.video;
+      const settings: Record<string, unknown> = {...DEFAULTS, ...stored};
+      for (const [key, value] of Object.entries(params[0] ?? {})) {
+        if (key in DEFAULTS && (!CHOICES[key] || CHOICES[key].includes(value))) settings[key] = value;
+      }
+      ws.send(JSON.stringify({id, result: {settings, source: stored ? 'project' : 'defaults', choices: CHOICES,
+        presets: {'Default Tutorial': DEFAULTS, 'Final Circuit Showcase': {...DEFAULTS, mode: 'orbit'}}}}));
+    } else if (method === 'capabilities') ws.send(JSON.stringify({id, result: {mp4: true, webm: true, png: true}}));
     else if (method === 'renderVideo') {
+      rendered.push(params[0]);
       ws.send(JSON.stringify({id, progress: {stage: 'Rendering', frame: 1, total: 2, percent: 52}}));
       ws.send(JSON.stringify({id, result: {blob: {$blob: {type: 'video/mp4', base64: 'AAAA'}}, filename: 'Demo wiring.mp4',
         mimeType: 'video/mp4', frames: 2, duration: 0.07, warnings: ['a part has no model']}}));
@@ -59,7 +77,7 @@ async function page(bridge: Bridge, {token = bridge.token, origin = bridge.base.
     ws.once('error', reject);
     ws.once('unexpected-response', () => reject(new Error('refused')));
   }).then(() => ws.send(JSON.stringify({type: 'hello', token, protocol: 'circuit-studio-bridge/1', api: 1})));
-  return {ws, closed, held: () => held!, welcome: () => welcome, edit: (change: (p: CsProject) => void) => change(held!)};
+  return {ws, closed, held: () => held!, welcome: () => welcome, rendered, edit: (change: (p: CsProject) => void) => change(held!)};
 }
 
 after(() => rmSync(temp, {recursive: true, force: true}));
@@ -171,7 +189,8 @@ describe('studio', () => {
       const lines: string[] = [];
       const told = await studio.render({browser: false}, line => lines.push(line));
       assert.deepEqual(lines, ['rendering: Rendering 50%']);
-      assert.match(told, /^Rendered \.circuitstudio\/media\/Demo-wiring\.mp4: 0\.0 MB, 0\.1 s, 2 frames, in \d+ s\.\nwarning: a part has no model$/);
+      assert.match(told, /^Settings: mode tutorial, 1920 × 1080, 30 fps, mp4, background dark-studio, HUD futuristic, labels minimal \(Circuit Studio's defaults: no \.circuitstudio\/video\.json yet\)\.\n/);
+      assert.match(told, /\nRendered \.circuitstudio\/media\/Demo-wiring\.mp4: 0\.0 MB, 0\.1 s, 2 frames, in \d+ s\.\nwarning: a part has no model$/);
       assert.ok(existsSync(join(root, '.circuitstudio', 'media', 'Demo-wiring.mp4')));
       assert.ok(!existsSync(join(root, '.circuitstudio', 'media', 'Demo-wiring.png')));
       assert.match(await studio.render({browser: false, poster: true}, () => {}), /Poster: \.circuitstudio\/media\/Demo-wiring\.png/);
@@ -181,11 +200,40 @@ describe('studio', () => {
     }
   });
 
+  test('saves the video settings: chosen in the chat, or stored in the page, then used by render', async () => {
+    const studio = await Studio.start(root, {from: join(temp, 'circuit-studio')});
+    const video = () => JSON.parse(readFileSync(join(root, '.circuitstudio', 'video.json'), 'utf8'));
+    try {
+      const fake = await page(studio.bridge);
+      assert.equal(await studio.bridge.waitForPage(2000), true);
+      assert.match(await studio.video('choices', []), /Final Circuit Showcase: mode orbit[\s\S]*fps: 24, 30, 60/);
+      assert.match(await studio.video('settings', ['preset=Final Circuit Showcase', 'fps=60']), /mode orbit, 1920 × 1080, 60 fps/);
+      assert.deepEqual([video().settings.mode, video().settings.fps], ['orbit', 60]);
+      assert.equal((fake.held() as {presentation?: {video?: {fps?: number}}}).presentation?.video?.fps, 60, 'the page shows them');
+      await assert.rejects(studio.video('settings', ['fps=25']), /fps=25 not accepted: one of 24, 30, 60/);
+      await assert.rejects(studio.video('settings', ['speed=2']), /speed: not a video setting/);
+      await assert.rejects(studio.video('settings', ['preset=Nope']), /no video preset "Nope"/);
+      assert.match(await studio.video('settings', [], {defaults: true}), /mode tutorial, 1920 × 1080, 30 fps/);
+      // Stored in the page's Auto Video dialog: read back by sync.
+      fake.edit(p => { (p as {presentation?: object}).presentation = {video: {...DEFAULTS, fps: 24}, cameraScenes: [{id: 'top'}]}; });
+      assert.match(await studio.sync(), /video settings stored in the page into \.circuitstudio\/video\.json: .*24 fps/);
+      assert.deepEqual([video().settings.fps, video().scenes], [24, [{id: 'top'}]]);
+      assert.match(await studio.sync(), /No edit/);
+      const told = await studio.render({browser: false}, () => {});
+      assert.match(told, /24 fps.*\(from \.circuitstudio\/video\.json\)/);
+      assert.equal((fake.rendered.at(-1) as {fps: number}).fps, 24);
+      rmSync(join(root, '.circuitstudio', 'media', 'Demo-wiring.png'));
+      assert.match(await studio.poster(), /Poster: \.circuitstudio\/media\/Demo-wiring\.png/);
+    } finally {
+      await studio.close();
+    }
+  });
+
   test('runs in the background and answers the other studio commands', async () => {
     const lines: string[] = [];
     const run = async (...args: string[]) => {
       lines.length = 0;
-      const code = await main(['studio', ...args], {cwd: root, out: l => lines.push(l), err: l => lines.push(l)});
+      const code = await main(args[0] === 'video' ? args : ['studio', ...args], {cwd: root, out: l => lines.push(l), err: l => lines.push(l)});
       return {code, text: lines.join('\n')};
     };
     assert.match((await run('status')).text, /not running/);
@@ -196,13 +244,16 @@ describe('studio', () => {
     assert.match(opened.text, /No Circuit Studio page connected[\s\S]*#bridge=ws:\/\/127\.0\.0\.1:\d+\/bridge&token=/);
     const state = JSON.parse(readFileSync(join(root, '.circuitstudio', 'studio.json'), 'utf8'));
     assert.match((await run('status')).text, /page: not connected/);
+    // Hyphenated actions reach the process too (not the page's files): no page, so it hands back the link.
+    const choices = await run('video', 'choices', '--no-browser', '--wait', '0.2');
+    assert.equal(choices.code, 1);
+    assert.match(choices.text, /No Circuit Studio page connected/);
     // Control requests need the control token, and never come from a page.
     assert.equal((await fetch(`http://127.0.0.1:${state.port}/__kit/status`, {method: 'POST'})).status, 403);
     assert.equal((await fetch(`http://127.0.0.1:${state.port}/__kit/status`, {method: 'POST',
       headers: {'x-kit-control': state.control, origin: 'https://example.com'}})).status, 403);
     assert.equal(readFileSync(join(root, '.circuitstudio', '.gitignore'), 'utf8').split('\n').filter(l => l && !l.startsWith('#')).join(' '), 'studio.json studio.log');
     assert.match((await run('stop')).text, /stopped/);
-    for (let i = 0; i < 50 && (await run('status')).text.includes('page:'); i++) await new Promise(r => setTimeout(r, 100));
     assert.match((await run('status')).text, /not running/);
   });
 });

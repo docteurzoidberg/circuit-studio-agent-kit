@@ -4,7 +4,8 @@
 //
 //   studio open    starts the process if needed, opens the link in the user's browser when no page is connected,
 //                  and opens .circuitstudio/project.c3dproj in the page (again after each build: it reloads)
-//   studio sync    writes the parts the user moved and the routes they reshaped in the page into the project file
+//   studio sync    writes the parts the user moved and the routes they reshaped in the page into the project file,
+//                  and the video settings they stored there into .circuitstudio/video.json
 //   studio status  what is running and connected, and the link that opens the page
 //   studio stop    stops the process
 //
@@ -12,7 +13,7 @@
 // different from the page's token (which the page's link shows).
 import {randomBytes} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {existsSync, mkdirSync, openSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import {basename, dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Bridge, findBuild} from '../bridge/bridge.ts';
@@ -21,6 +22,10 @@ import {openInBrowser} from '../bridge/open.ts';
 import {readConfig, writeConfig} from '../config.ts';
 import {kitPath} from '../project.ts';
 import type {CsProject} from '../project/engine.ts';
+import {checkRequested, describeChoices, describeSettings, parseAssignments, readVideo, VIDEO_FILE, writeVideo,
+  type VideoSettings, type VideoSettingsInfo} from '../video/video.ts';
+
+type Presentation = {video?: VideoSettings; cameraScenes?: unknown[]; [key: string]: unknown};
 
 const CLI = fileURLToPath(new URL('../cli.ts', import.meta.url));
 
@@ -93,21 +98,69 @@ export class Studio {
       + `${summary.components} parts, ${summary.wires} wires.`;
   }
 
-  /** Writes the parts the user moved and the routes they reshaped in the page into the project file. */
+  /**
+   * Writes the parts the user moved and the routes they reshaped in the page into the project file, and the video
+   * settings and camera scenes they stored in the page (Auto Video, "Store settings in project") into video.json.
+   */
   async sync(): Promise<string> {
     if (!this.bridge.connected) throw new Error('no Circuit Studio page is connected: run studio open first');
     const file = kitPath(this.root, 'project.c3dproj');
-    const project = JSON.parse(readFileSync(file, 'utf8')) as CsProject;
-    const edited = await this.bridge.call<Placed>('getProject');
+    const project = JSON.parse(readFileSync(file, 'utf8')) as CsProject & {presentation?: Presentation};
+    const edited = await this.bridge.call<Placed & {presentation?: Presentation}>('getProject');
     const now = snapshot(edited);
     // Without a baseline (opened by an earlier process), compare with the file: placements only, since the page
     // normalises wires.
     const changed = this.baseline ? changes(this.baseline, now) : changes(snapshot(project), now, {wires: false});
     const told = applyEdits(project, edited, changed);
-    if (told.length) writeFileSync(file, `${JSON.stringify(project, null, 1)}\n`);
+    const stored = edited.presentation?.video, video = readVideo(this.root);
+    const videoChanged = !!stored && (JSON.stringify(stored) !== JSON.stringify(video.settings)
+      || JSON.stringify(edited.presentation?.cameraScenes ?? []) !== JSON.stringify(video.scenes ?? []));
+    if (videoChanged) {
+      project.presentation = structuredClone(edited.presentation);
+      writeVideo(this.root, {...video, settings: stored, scenes: edited.presentation?.cameraScenes ?? []});
+    }
+    if (told.length || videoChanged) writeFileSync(file, `${JSON.stringify(project, null, 1)}\n`);
     this.baseline = now;
-    return told.length ? `Saved the user's edits into .circuitstudio/project.c3dproj:\n${told.join('\n')}`
-      : 'No edit in Circuit Studio since the project was opened.';
+    const lines = told.length ? [`Saved the user's edits into .circuitstudio/project.c3dproj:`, ...told] : [];
+    if (videoChanged) lines.push(`Saved the video settings stored in the page into ${VIDEO_FILE}: ${describeSettings(stored)}`);
+    return lines.length ? lines.join('\n') : 'No edit in Circuit Studio since the project was opened.';
+  }
+
+  /** The page's answer for these settings: what a render would use, presets and allowed values. */
+  private async videoInfo(settings?: VideoSettings, options: {browser?: boolean; wait?: number} = {}): Promise<VideoSettingsInfo> {
+    if (!this.bridge.connected || !this.baseline) {
+      const opened = await this.open(options);
+      if (!this.bridge.connected) throw new Error(opened);
+    }
+    return this.bridge.call<VideoSettingsInfo>('videoSettings', settings ? [settings] : []);
+  }
+
+  /**
+   * `video choices`: the presets and allowed values, for the skill's questions. `video settings`: saves the
+   * settings into video.json (Circuit Studio's defaults with `defaults`; else a `preset=<name>` and `key=value`
+   * changes on top of the saved ones), checked by the page, and copies them into the project the page shows.
+   */
+  async video(action: 'choices' | 'settings', args: string[], options: {defaults?: boolean; browser?: boolean; wait?: number} = {}): Promise<string> {
+    if (action === 'choices') return describeChoices(await this.videoInfo(undefined, options));
+    const {preset, ...changes} = parseAssignments(args);
+    const saved = readVideo(this.root);
+    const first = await this.videoInfo(undefined, options);
+    const named = preset === undefined ? undefined : first.presets[String(preset)];
+    if (preset !== undefined && !named) throw new Error(`no video preset "${preset}": ${Object.keys(first.presets).join(', ')}`);
+    if (!options.defaults && !named && !Object.keys(changes).length) {
+      return saved.settings ? `${VIDEO_FILE}: ${describeSettings(saved.settings)}` : `${VIDEO_FILE}: no settings chosen yet`;
+    }
+    const defaults = Object.values(first.presets)[0];
+    const base = options.defaults ? defaults : named ?? saved.settings ?? first.settings;
+    const info = await this.videoInfo({...base, ...(named ?? {}), ...changes}, options);
+    checkRequested(changes, info);
+    writeVideo(this.root, {...saved, settings: info.settings});
+    const file = kitPath(this.root, 'project.c3dproj');
+    const project = JSON.parse(readFileSync(file, 'utf8')) as CsProject & {presentation?: Presentation};
+    project.presentation = {...project.presentation, video: info.settings};
+    writeFileSync(file, `${JSON.stringify(project, null, 1)}\n`);
+    await this.open(options);
+    return `Saved the video settings into ${VIDEO_FILE}: ${describeSettings(info.settings)}`;
   }
 
   /**
@@ -123,27 +176,44 @@ export class Studio {
     if (!capabilities.mp4 && !capabilities.webm) {
       throw new Error('this browser can encode neither MP4 nor WebM video (WebCodecs): try a recent Chrome or Edge');
     }
+    const video = readVideo(this.root);
+    const info = await this.bridge.call<VideoSettingsInfo>('videoSettings', video.settings ? [video.settings] : []);
+    told.push(`Settings: ${describeSettings(info.settings)} (${video.settings ? `from ${VIDEO_FILE}`
+      : info.source === 'project' ? 'stored in the project' : `Circuit Studio's defaults: no ${VIDEO_FILE} yet`}).`);
     let last = '';
     const started = Date.now();
-    const result = await this.bridge.call<RenderResult>('renderVideo', [{}, {}], value => {
+    const result = await this.bridge.call<RenderResult>('renderVideo', [info.settings, {}], value => {
       const {stage, percent} = value as {stage: string; percent: number};
       const line = `${stage} ${Math.floor(percent / 5) * 5}%`;
       if (line !== last) progress(`rendering: ${last = line}`);
     });
     const media = dirname(kitPath(this.root, 'media/video', {create: true}));
     const name = basename(result.filename).replace(/[^\p{L}\p{N}._-]+/gu, '-') || 'wiring.mp4';
-    const video = join(media, name);
-    writeFileSync(video, Buffer.from(result.blob.$blob.base64, 'base64'));
-    told.push(`Rendered .circuitstudio/media/${name}: ${(statSync(video).size / 1e6).toFixed(1)} MB, `
+    const output = join(media, name);
+    writeFileSync(output, Buffer.from(result.blob.$blob.base64, 'base64'));
+    told.push(`Rendered .circuitstudio/media/${name}: ${(statSync(output).size / 1e6).toFixed(1)} MB, `
       + `${result.duration.toFixed(1)} s, ${result.frames} frames, in ${Math.round((Date.now() - started) / 1000)} s.`);
     for (const warning of result.warnings) told.push(`warning: ${warning}`);
-    if (options.poster) {
-      const image = await this.bridge.call<{$blob: {base64: string}}>('renderImage', [{width: 1920, height: 1080}]);
-      const poster = name.replace(/\.\w+$/, '') + '.png';
-      writeFileSync(join(media, poster), Buffer.from(image.$blob.base64, 'base64'));
-      told.push(`Poster: .circuitstudio/media/${poster} (1920 × 1080, the project's camera view).`);
-    }
+    if (options.poster ?? video.outputs?.poster) told.push(await this.writePoster(name.replace(/\.\w+$/, '')));
     return told.filter(line => !line.startsWith('No edit')).join('\n');
+  }
+
+  /** `video poster`: the still image alone, named after the latest video, without rendering the video again. */
+  async poster(options: {browser?: boolean; wait?: number} = {}): Promise<string> {
+    if (!this.bridge.connected || !this.baseline) {
+      const opened = await this.open(options);
+      if (!this.bridge.connected) throw new Error(opened);
+    }
+    const media = dirname(kitPath(this.root, 'media/video', {create: true}));
+    const latest = readdirSync(media).filter(f => /\.(mp4|webm)$/.test(f))
+      .sort((a, b) => statSync(join(media, b)).mtimeMs - statSync(join(media, a)).mtimeMs)[0];
+    return this.writePoster(latest ? latest.replace(/\.\w+$/, '') : 'poster');
+  }
+
+  private async writePoster(base: string): Promise<string> {
+    const image = await this.bridge.call<{$blob: {base64: string}}>('renderImage', [{width: 1920, height: 1080}]);
+    writeFileSync(join(dirname(kitPath(this.root, 'media/video', {create: true})), `${base}.png`), Buffer.from(image.$blob.base64, 'base64'));
+    return `Poster: .circuitstudio/media/${base}.png (1920 × 1080, the project's camera view).`;
   }
 
   close(): Promise<void> {
@@ -152,7 +222,7 @@ export class Studio {
 }
 
 export interface RenderOptions {
-  /** Also write a poster image (a still of the camera view), on request only (D26). */
+  /** Also write a poster image (a still of the camera view); by default, as video.json's outputs say (D26). */
   poster?: boolean;
   browser?: boolean;
   wait?: number;
@@ -192,8 +262,13 @@ export async function runStudio(root: string, source: StudioSource, log: (line: 
     if (action === 'open') return studio.open(body as {browser?: boolean; wait?: number});
     if (action === 'sync') return studio.sync();
     if (action === 'render') return studio.render(body as RenderOptions, progress);
+    if (action === 'video-poster') return studio.poster(body as {browser?: boolean; wait?: number});
+    if (action === 'video-choices' || action === 'video-settings') {
+      const {args = [], ...options} = body as {args?: string[]; defaults?: boolean; browser?: boolean; wait?: number};
+      return studio.video(action === 'video-choices' ? 'choices' : 'settings', args, options);
+    }
     if (action === 'stop') {
-      setTimeout(finish, 50);
+      studio.bridge.afterReply = finish;
       return 'studio stopped';
     }
     throw new Error(`unknown studio action: ${action}`);
@@ -258,16 +333,24 @@ async function launch(root: string, source: StudioSource): Promise<StudioState> 
 
 /** The `studio` commands other than `start`, and `render`. */
 export async function studioCommand(root: string, action: string,
-  options: StudioSource & RenderOptions & {browser?: boolean; wait?: number}, progress?: (line: string) => void): Promise<string> {
+  options: StudioSource & RenderOptions & {browser?: boolean; wait?: number; args?: string[]; defaults?: boolean},
+  progress?: (line: string) => void): Promise<string> {
   let state = readState(root);
-  if (action === 'stop') return state ? request(state, 'stop') : 'studio is not running';
+  if (action === 'stop') {
+    if (!state) return 'studio is not running';
+    const text = await request(state, 'stop');
+    // Answer once the process is gone, so a command right after does not reach a process on its way out.
+    for (let i = 0; i < 50 && readState(root); i++) await new Promise(r => setTimeout(r, 100));
+    return text;
+  }
   if (action === 'status' && !state) {
     const studio = readConfig().circuitStudio;
     return `studio is not running. Circuit Studio: ${studio?.build ?? studio?.site ?? `none configured. ${MANUAL}`}`;
   }
   if (!state) {
-    if (action !== 'open' && action !== 'render') throw new Error('studio is not running: run studio open first');
+    if (!['open', 'render', 'video-choices', 'video-settings', 'video-poster'].includes(action)) throw new Error('studio is not running: run studio open first');
     state = await launch(root, options);
   }
-  return request(state, action, {browser: options.browser, wait: options.wait, poster: options.poster}, progress);
+  return request(state, action, {browser: options.browser, wait: options.wait, poster: options.poster, args: options.args,
+    defaults: options.defaults}, progress);
 }

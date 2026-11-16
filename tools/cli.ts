@@ -9,6 +9,7 @@ import {convertCommand, inspectCommand, type PartOptions} from './parts/commands
 import {projectRoot} from './project.ts';
 import {build, formatBuild} from './project/build.ts';
 import {runStudio, studioCommand} from './studio/studio.ts';
+import {describeSettings, parseAssignments, readVideo, VIDEO_FILE, writeVideo} from './video/video.ts';
 import {checkWiring, formatReport} from './wiring/check.ts';
 import {formatPins, PartLibrary} from './wiring/pins.ts';
 
@@ -42,6 +43,17 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
   studio sync | status | stop
       sync writes the parts the user moved and the routes they reshaped in the page into the project;
       status tells what runs and is connected; stop ends the background process
+  video
+      what .circuitstudio/video.json holds: the video settings, the outputs, the automation (D27)
+  video choices
+      the presets and allowed values of Circuit Studio's video settings (asks the connected page)
+  video settings [--defaults] [preset=<name>] [<key>=<value>]...
+      saves the video settings into video.json, checked by the connected page: Circuit Studio's
+      defaults, a preset, or changes on top of the saved ones; without arguments, shows them
+  video outputs poster=on|off
+      what render writes besides the video, from now on
+  video poster
+      writes the poster image now (a still of the camera view), without rendering the video again
   render [--poster] [--no-browser] [--wait <s>]
       renders the video in the connected Circuit Studio page (opening it first when needed): saves the
       user's edits, reloads the project, writes the MP4 into .circuitstudio/media/; --poster also writes
@@ -56,12 +68,12 @@ const OPTIONS = {
   from: {type: 'string'}, download: {type: 'boolean'}, ref: {type: 'string'}, force: {type: 'boolean'},
   wires: {type: 'boolean'}, reset: {type: 'string', multiple: true}, move: {type: 'string', multiple: true},
   'dry-run': {type: 'boolean'}, url: {type: 'string'}, 'no-browser': {type: 'boolean'}, wait: {type: 'string'},
-  poster: {type: 'boolean'},
+  poster: {type: 'boolean'}, defaults: {type: 'boolean'},
   help: {type: 'boolean', short: 'h'},
 } as const;
 
 type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean; reset?: string[]; move?: string[];
-  'dry-run'?: boolean; url?: string; 'no-browser'?: boolean; wait?: string; poster?: boolean};
+  'dry-run'?: boolean; url?: string; 'no-browser'?: boolean; wait?: string; poster?: boolean; defaults?: boolean};
 
 /** Where the command line runs and writes (the tests give their own). */
 export interface Io {
@@ -129,6 +141,29 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
       const wait = options.wait === undefined ? undefined : Number(options.wait);
       out(await studioCommand(projectRoot(cwd), 'render', {from: options.from, url: options.url,
         browser: !options['no-browser'], wait, poster: options.poster}, line => err(line)));
+      return 0;
+    }
+    if (command === 'video') {
+      const [action, ...rest] = args;
+      const root = projectRoot(cwd);
+      if (action === undefined) {
+        const video = readVideo(root);
+        out([`settings: ${video.settings ? describeSettings(video.settings) : 'not chosen yet'}`,
+          `outputs: ${video.outputs ? `poster ${video.outputs.poster ? 'on' : 'off'}` : 'not chosen yet'}`,
+          `automation: ${video.automation ? JSON.stringify(video.automation) : 'none'}`].join('\n'));
+        return 0;
+      }
+      if (action === 'outputs') {
+        const {poster, ...other} = parseAssignments(rest);
+        if (Object.keys(other).length || typeof poster !== 'boolean') throw new UsageError('video outputs takes poster=on|off');
+        writeVideo(root, {...readVideo(root), outputs: {poster}});
+        out(`Saved into ${VIDEO_FILE}: render writes ${poster ? 'a poster image besides the video' : 'the video only'}.`);
+        return 0;
+      }
+      if (!['choices', 'settings', 'poster'].includes(action)) throw new UsageError('video takes one of: choices, settings, outputs, poster');
+      const wait = options.wait === undefined ? undefined : Number(options.wait);
+      out(await studioCommand(root, `video-${action}`, {from: options.from, url: options.url, browser: !options['no-browser'],
+        wait, args: rest, defaults: options.defaults}));
       return 0;
     }
     if (command === 'studio') {

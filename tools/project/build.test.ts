@@ -140,6 +140,11 @@ describe('build', {skip}, () => {
     assert.deepEqual([p.wires[3].routeMode, p.wires[3].bendPoints, p.wires[3].color], ['manual', [[30, 30, 6]], '#2b60ae']);
     assert.deepEqual(p.camera, edited.camera);
     assert.deepEqual(p.presentation, edited.presentation);
+    // The video settings chosen for the project (video.json) win, so the page's dialog shows them.
+    write('.circuitstudio/video.json', {settings: {fps: 60, mode: 'orbit'}, scenes: []});
+    await build(w);
+    assert.deepEqual(read().presentation, {video: {fps: 60, mode: 'orbit'}, cameraScenes: []});
+    rmSync(join(project, '.circuitstudio', 'video.json'));
     const led = p.components.find((c: Box) => c.id === 'led');
     for (const other of p.components.filter((c: Box) => c.id !== 'led')) assert.ok(!footprintsOverlap(led, other), `LED overlaps ${other.id}`);
   });

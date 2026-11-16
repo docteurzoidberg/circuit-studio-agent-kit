@@ -56,7 +56,7 @@ local tool                                            Circuit Studio page
 - **Renders shown in the page.** A video rendered through the API shows Circuit Studio's own progress panel,
   whose **Cancel video** button stops it.
 - **Nothing new to call.** The requests are the automation API's methods (`openProject`, `getProject`,
-  `listParts`, `capabilities`, `renderImage`, `renderVideo`, `planRoutes`, plus `ready`); a `Blob` result comes
+  `listParts`, `capabilities`, `renderImage`, `renderVideo`, `planRoutes`, `videoSettings`, plus `ready`); a `Blob` result comes
   back as base64; `renderVideo` streams its progress and can be cancelled.
 - **Always visible.** While the bridge is on, a badge in the header (green when connected, grey while waiting,
   red when the link is refused), next to the project name, says
