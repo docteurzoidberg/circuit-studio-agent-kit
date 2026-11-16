@@ -89,7 +89,7 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 | `npx <name> mcp` | Setup | The MCP server, one tool per command, for any agent; registered by `init`, the agent starts and stops it itself | Planned |
 | `npx <name> check` | All | Where the project stands with the kit: steps done, step in progress, what to do next | Planned |
 | `npx <name> wiring` | `wiring-plan` | Checks `.circuitstudio/wiring.json` against its document (hash), the parts and their pins | Planned |
-| `npx <name> part catalog` | `wiring-parts` | Snapshot of the Circuit Studio catalog into `.circuitstudio/catalog.json` | Written as a script ([tools/catalog/](tools/catalog/)), not yet a `part` command |
+| `npx <name> part catalog` | `wiring-parts` | Snapshot of the Circuit Studio catalog into `.circuitstudio/catalog.json` | Written ([tools/catalog/](tools/catalog/)); `--download` not tried yet |
 | `npx <name> part inspect <model.step>` | `wiring-parts` | What a STEP model holds: tree, colours, sizes, contact rows, complexity | Written ([tools/parts/](tools/parts/)) |
 | `npx <name> part convert <part.yaml>` | `wiring-parts` | STEP model to Circuit Studio part (`.c3dcomponent` and a preview), next to the spec | Written ([tools/parts/](tools/parts/)) |
 | `npx <name> build` | `wiring-project` | Generates or updates `.circuitstudio/project.c3dproj`, keeping manual edits | Planned |
@@ -111,8 +111,9 @@ The skills are used in this order; each starts from what the previous one produc
 | `wiring-project` | Generates the Circuit Studio project (placement, wire routes, camera, presentation texts) and reviews it with the owner until they validate it, keeping their manual edits from the editor | **Planned** |
 | `wiring-video` | Renders the validated project into the video, WebP and poster, and helps the owner set up their own automation | **Planned** |
 
-The command line and the MCP server hold the logic the skills call (commands above). The Node part tools have a
-first Python version in `tools/c3dparts/`, kept as the reference their tests compare with.
+The command line and the MCP server hold the logic the skills call (commands above). They are written in TypeScript
+(D17); the part tools have a first Python version in `tools/c3dparts/`, kept as the reference their tests compare
+with.
 
 ## What the feasibility study showed
 
@@ -134,8 +135,8 @@ request numbers on GitHub.
 
 | Change | What it does | State |
 |---|---|---|
-| **Base-path assets** | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) | **Open**: issue [#1](https://github.com/arslansadiq87/circuit-studio/issues/1), pull request [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) |
-| **Model references** | Built-in model references resolved from `modelId` when a project does not carry them | **Open**: issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3), pull request [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) |
+| **Base-path assets** | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) | **Fixed upstream** (2026-11-16) by the maintainer in [`1713780`](https://github.com/arslansadiq87/circuit-studio/commit/1713780), closing issue [#1](https://github.com/arslansadiq87/circuit-studio/issues/1); our pull request [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) is now redundant |
+| **Model references** | Built-in model references resolved from `modelId` when a project does not carry them | **Fixed upstream** (2026-11-16) by the maintainer in [`1713780`](https://github.com/arslansadiq87/circuit-studio/commit/1713780), closing issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3); our pull request [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) is now redundant |
 | **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); planned texts in [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md) |
 | **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on the two changes above) |
 
