@@ -89,21 +89,13 @@ async function loadModule(entry: string, work: string, name: string): Promise<Re
   return import(pathToFileURL(out).href);
 }
 
-/** modelIds of the parts the app offers to add: src/catalog.ts when present, else the list in src/store.ts. */
-async function offeredModelIds(root: string, work: string, module: Record<string, unknown>): Promise<Set<string> | undefined> {
-  const catalog = join(root, 'src', 'catalog.ts');
-  if (existsSync(catalog)) {
-    const {BUILT_IN_COMPONENTS} = await loadModule(catalog, work, 'catalog');
-    if (Array.isArray(BUILT_IN_COMPONENTS)) return new Set(BUILT_IN_COMPONENTS.filter(isComponent).map(c => c.modelId));
-  }
+/** modelIds of the parts the app offers to add, read from the list in src/store.ts (undefined when not found). */
+function offeredModelIds(root: string, module: Record<string, unknown>): Set<string> | undefined {
   const store = join(root, 'src', 'store.ts');
-  if (existsSync(store)) {
-    const list = readFileSync(store, 'utf8').match(/\[([A-Z0-9_,\s]+)\]\.find\(\s*c\s*=>\s*c\.modelId\s*===\s*modelId\s*\)/);
-    if (list) {
-      return new Set(list[1].split(',').map(n => module[n.trim()]).filter(isComponent).map(c => c.modelId));
-    }
-  }
-  return undefined;
+  if (!existsSync(store)) return undefined;
+  const list = readFileSync(store, 'utf8').match(/\[([A-Z0-9_,\s]+)\]\.find\(\s*c\s*=>\s*c\.modelId\s*===\s*modelId\s*\)/);
+  if (!list) return undefined;
+  return new Set(list[1].split(',').map(n => module[n.trim()]).filter(isComponent).map(c => c.modelId));
 }
 
 /** Load the components exported by <root>/src/model.ts. */
@@ -113,7 +105,7 @@ export async function loadComponents(root: string): Promise<CatalogPart[]> {
   const work = mkdtempSync(join(tmpdir(), 'cs-catalog-'));
   try {
     const module = await loadModule(entry, work, 'model');
-    const offered = await offeredModelIds(root, work, module);
+    const offered = offeredModelIds(root, module);
     const parts: CatalogPart[] = [];
     const seen = new Set<string>();
     for (const [name, value] of Object.entries(module)) {

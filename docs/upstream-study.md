@@ -95,6 +95,11 @@ acceptance environment. The points below remain relevant for other setups.
 
 Decision: dev server for the spike, pinned build with an automation API as the target (PLAN.md, D9).
 
+Update 2026-11-16: since upstream `1713780` the hosted site resolves bundled models and fonts under its base path
+(checked on the deployed bundle; a model URL answers 200), and saved built-in parts get their model from `modelId`.
+The hosted site can therefore show a generated project for a manual check; automated rendering still needs the
+automation API.
+
 ## Required versus optional upstream changes
 
 Required for durable use:
