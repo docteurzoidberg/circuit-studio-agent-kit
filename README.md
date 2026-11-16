@@ -3,8 +3,9 @@
 Agent skills, an MCP server and a CLI that turn an electronics project's wiring documentation into a 3D wiring
 video, using [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio) as the rendering engine.
 
-> Status: **feasibility study done, implementation not started.** This repository holds the plan, the study of
-> Circuit Studio, the test scripts, and the changes we would like to propose upstream.
+> Status: **feasibility study done, implementation started.** The first skill, `wiring-plan`, works (first
+> version); the others are in progress or planned (see [Skills](#skills)). This repository also holds the plan,
+> the study of Circuit Studio, the test scripts, and the changes we would like to propose upstream.
 
 ## Why
 
@@ -42,11 +43,12 @@ flowchart LR
   C --> OUT[MP4 + WebP + poster]
 ```
 
-1. **Describe the wiring.** The `wiring-plan` skill reads the project (any format) and writes or completes a
-   Markdown wiring document from a template. It reports inconsistencies, for example a GPIO in the docs that
-   differs from the firmware, and asks for exact pin names using the pins Circuit Studio knows for each part.
-   It then resolves the document into a `wiring.json` (parts, pin identifiers, wire order, layout hints), the
-   only input of the CLI; see [examples/claudemetre/](examples/claudemetre/).
+1. **Describe the wiring.** The `wiring-plan` skill reads the project (any format), or interviews the owner
+   when there is nothing to read, writes or completes a Markdown wiring document from a template, and reviews
+   it with the owner until they validate it. It reports inconsistencies, for example a GPIO in the docs that
+   differs from the firmware. Once the parts are ready (step 2), it resolves the document into a `wiring.json`
+   (parts, pin identifiers, wire order, layout hints), the only input of the CLI, asking for exact pin names
+   using the pins Circuit Studio knows for each part; see [examples/claudemetre/](examples/claudemetre/).
 
    ```markdown
    ## Parts
@@ -63,7 +65,8 @@ flowchart LR
 
 2. **Prepare the parts.** For each part missing from the Circuit Studio catalog, the `wiring-parts` skill uses
    the project's own STEP model, or helps find or create one, then converts it into a Circuit Studio part:
-   simplified mesh, colours, measured pin positions, and a preview to check the pins.
+   colours, measured pin positions, a mesh simplified only when the model is really complex, and a preview to
+   check the pins.
 
 3. **Render.** The `wiring-video` skill (or the CLI, or the MCP server) builds the Circuit Studio project, shows
    preview frames, and renders an MP4 plus a WebP and a poster image for the README. Rendering runs locally in
@@ -74,13 +77,28 @@ flowchart LR
 Planned commands (one npm package, name still to be chosen):
 
 ```bash
-npx <name> init                                   # install the skills, register the MCP server
+npx <name> init                                   # install the skills (project or global), register the MCP server
 <name> check docs/wiring.json                     # validate the resolved wiring
-<name> part convert board.step --spec board.yaml  # STEP model to Circuit Studio part
+<name> part inspect board.step                   # what the model holds: tree, colours, contacts
+<name> part convert board.yaml                    # STEP model to Circuit Studio part, from its spec
 <name> render docs/wiring.json --out docs/media/  # MP4 + WebP + poster
 <name> mcp                                        # MCP server for any agent
 npx <name> uninstall                              # remove what init installed, keep the project's files
 ```
+
+## Skills
+
+The skills are used in this order; each starts from what the previous one produced.
+
+| Skill | What it does | State |
+|---|---|---|
+| `wiring-plan` | Writes the wiring document from the project's sources, or by interviewing the owner, and reviews it with them until they validate it | **Implemented** (first version, being refined): [user guide](docs/user-guide/skills/wiring-plan.md), [skills/wiring-plan/](skills/wiring-plan/) |
+| `wiring-parts` | Gives every part of the document a 3D model Circuit Studio can show, with its pins at the right places | **In progress**: design and [user guide draft](docs/user-guide/skills/wiring-parts.md); the `part inspect` and `part convert` commands are written, the skill comes next |
+| Resolution into `wiring.json` | Part of `wiring-plan`, run after the parts: resolves the document into the file the CLI renders from | **Planned**: the [schema](schema/wiring.schema.json) and an [example](examples/claudemetre/wiring.json) exist; the instructions are a [draft](skills/wiring-plan/resolve.md) |
+| `wiring-video` | Builds the Circuit Studio project, shows preview frames, renders the video, and helps the owner set up their own automation | **Planned** |
+
+The command line and the MCP server hold the logic the skills call (commands above): `part inspect` and
+`part convert` are written (Python prototype in `tools/c3dparts/`); `check`, `render`, `init`, `uninstall` and the MCP server (`mcp`) are planned.
 
 ## What the feasibility study showed
 
@@ -118,7 +136,9 @@ Bugs met during the study: [docs/upstream-bugs.md](docs/upstream-bugs.md). Statu
 The study uses the wiring of [Claudemètre](https://github.com/docteurzoidberg/claudemetre), an ESP32-S3 desk
 gauge (ESPHome) built on an MRD076A screw-terminal adapter, with two SO-45 panel voltmeters, a TM1637 display, a
 WS2812B strip and a 12 V input through an LP-16 socket, a fuse and a Mini360 step-down. A study copy of its
-wiring, written in the proposed Markdown format, is in
+wiring, as the `wiring-plan` skill writes it and describing the finished build, is the showcase example
+[examples/claudemetre/wiring.md](examples/claudemetre/wiring.md), resolved into
+[examples/claudemetre/wiring.json](examples/claudemetre/wiring.json). The spike's earlier study copy is in
 [spike/reference-project/wiring.md](spike/reference-project/wiring.md).
 
 ## Documents
@@ -126,6 +146,7 @@ wiring, written in the proposed Markdown format, is in
 | Document | Content |
 |---|---|
 | [PLAN.md](PLAN.md) | Goal, decisions, architecture, phases, open questions |
+| [docs/user-guide/skills/](docs/user-guide/skills/) | User guides of the skills (`wiring-plan`, `wiring-parts` draft) |
 | [docs/upstream-study.md](docs/upstream-study.md) | How Circuit Studio works, access modes, gaps |
 | [docs/feasibility-results.md](docs/feasibility-results.md) | Test results, findings, feature decisions |
 | [docs/tool-changes-plan.md](docs/tool-changes-plan.md) | Planned upstream pull requests |

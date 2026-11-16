@@ -1,6 +1,7 @@
 # Automated 3D wiring videos — plan
 
-Status: feasibility study, 2026-11-16. Nothing is implemented yet.
+Status, 2026-11-16: feasibility study and spike done; implementation started (`wiring-plan` skill, part converter
+command line). Details in "Status and next steps" below.
 Upstream tool: [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio), worked on through the fork
 [docteurzoidberg/circuit-studio](https://github.com/docteurzoidberg/circuit-studio). Findings: [docs/upstream-study.md](docs/upstream-study.md).
 
@@ -28,11 +29,13 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D6 | Upstream changes are made in the fork first and proposed as pull requests later. |
 | D7 | Everything written in this repository and upstream (docs, skills, code, PRs, commits) is in English. |
 | D8 | The architecture below (three skills, Markdown source, CLI + MCP, generated `.c3dproj`, user-chosen automation) is validated (2026-11-16). |
+| D9 | Circuit Studio access: the local clone with the Vite dev server for the spike; target is a pinned build of the fork with an automation API, bundled in the npm package. The hosted site is a fallback only. |
 | D10 | Upstream changes to propose: F1 automation API, F2 video settings in the project, F4 model references from `modelId`. Dropped or moved elsewhere: F3, F5, F6, F7, F8, F9, F10 (see [docs/feasibility-results.md](docs/feasibility-results.md)). |
 | D11 | Our package includes a **part converter**: STEP to `.c3dcomponent` (simplification, colour rules, contact measurement, light GLB). |
 | D12 | STEP engine for the converter: Python + CadQuery first; evaluate WASM when packaging for `npx`. Plans: [docs/tool-changes-plan.md](docs/tool-changes-plan.md) (order: base-path assets, model references, presentation in project, automation API) and [docs/part-converter-plan.md](docs/part-converter-plan.md). |
 | D13 | The skills offer to record, in a **`.circuitstudio/` folder at the root of the user's project**, the steps of the kit's integration and the generated files that only Circuit Studio or the kit use afterwards. The user decides whether to commit it, depending on its content. The wiring document itself stays where the user chose (the skill always asks). Content to be defined (open question 6). |
-| D9 | Circuit Studio access: the local clone with the Vite dev server for the spike; target is a pinned build of the fork with an automation API, bundled in the npm package. The hosted site is a fallback only. |
+| D14 | `wiring-parts` (2026-11-16): at launch, after asking the user (D15), it takes a **snapshot of the Circuit Studio catalog** (built-in parts and their pins) into `.circuitstudio/catalog.json`, compares it with the parts of the validated wiring document and the model files found in the project, lists the missing parts, then proposes how to get each (online search, modelling from the technical drawings available, stand-in). Prepared parts go to **`.circuitstudio/parts/<id>/`** (`part.yaml`, `.c3dcomponent`, preview). Built in this order: the `part inspect` / `part convert` command line from the spike prototype first, then the skill on top; the skill's first version covers model files already in the project and stand-ins, online search and modelling come next. User guide: [docs/user-guide/skills/wiring-parts.md](docs/user-guide/skills/wiring-parts.md). |
+| D15 | **No external call without asking** (2026-11-16): every skill asks the user before any network access (fetching the Circuit Studio catalog, an online search for a model or a datasheet, a download), saying what it will fetch and from where, and offers to go on without it. |
 
 ## Architecture
 
@@ -57,7 +60,7 @@ flowchart LR
 One npm package (name to be chosen):
 
 ```bash
-npx <name> init                # install the skills, register the MCP server
+npx <name> init                # install the skills (project or global), register the MCP server
 <name> check docs/wiring.json  # validate the resolved wiring (schema, parts, pins, stale hash)
 <name> render docs/wiring.json --out docs/media/
 <name> mcp                     # MCP server entry point
@@ -67,7 +70,8 @@ npx <name> uninstall           # remove what init installed
 The CLI holds all the logic; the MCP server and the skills call it. A user can automate rendering with the CLI
 alone, without Claude.
 
-`uninstall` undoes exactly what `init` did: it removes the installed skills and the MCP server registration,
+`init` asks whether to install the kit for the current project only (`.claude/` of the project) or globally (the
+user's `~/.claude/`), and does nothing else without that answer. `uninstall` undoes exactly what `init` did: it removes the installed skills and the MCP server registration,
 and lists what it removed. `init` records what it installs so that `uninstall` touches nothing else. The
 project's own files (wiring documents, `wiring.json`, parts, rendered videos) are never removed.
 
@@ -75,8 +79,8 @@ project's own files (wiring documents, `wiring.json`, parts, rendered videos) ar
 
 | Skill | Role |
 |---|---|
-| `wiring-plan` | Reads the project's sources (any format) and writes or completes the wiring document from the provided template. Reports inconsistencies, e.g. a GPIO in the docs that differs from the firmware. Asks for the exact terminal when several are equivalent (GND, 3V3, 5V) and can suggest the nearest one. Queries Circuit Studio for each model's pins and maps them into the document, or writes the document with those pin names. Can also guide a user who starts from nothing. |
-| `wiring-parts` | For each part missing from the Circuit Studio catalog (the user's own model first, otherwise created), runs the part converter (D11). Sources, in order: a STEP already in the project, an online search, modelling from technical drawings with the CAD tools found on the machine (Fusion, FreeCAD, CadQuery, Blender…), or a procedural board with headers as a fallback. Warns early that simplified models render much faster (simplification stays on the user's side). Restores colours by rules when a STEP has none, places the pin anchors and checks them with a render. |
+| `wiring-plan` | Reads the project's sources (any format) and writes or completes the wiring document from the provided template. Reports inconsistencies, e.g. a GPIO in the docs that differs from the firmware. Asks for the exact terminal when several are equivalent (GND, 3V3, 5V) and can suggest the nearest one. Writes pins as the project's sources name them; Circuit Studio pin identifiers are only needed later, when the document is resolved into `wiring.json` after the parts. Interviews a user who starts from nothing. Reviews the document with the user until they validate it. |
+| `wiring-parts` | For each part missing from the Circuit Studio catalog (the user's own model first, otherwise created), runs the part converter (D11). Sources, in order: a STEP already in the project, an online search, modelling from technical drawings with the CAD tools found on the machine (Fusion, FreeCAD, CadQuery, Blender…), or a procedural board with headers as a fallback. Offers to simplify a model only when it is really complex (many solids, a heavy mesh, as reported by `part inspect`); otherwise uses it as it is. Restores colours by rules when a STEP has none, places the pin anchors and checks them with a render. |
 | `wiring-video` | Builds the Circuit Studio project, shows preview frames, renders the video, and helps the user set up their own automation. |
 
 ### MCP server
@@ -174,8 +178,12 @@ Last update: 2026-11-16. Resume from here.
    [schema/wiring.schema.json](schema/wiring.schema.json), the showcase example
    [examples/claudemetre/](examples/claudemetre/) (finished build) and a draft (`resolve.md`), revisited after
    the parts; (c) the CLI `check` (schema, part and pin cross-references, stale hash).
-4. **Phase 4, part converter**: `part inspect` and `part convert` per
-   [docs/part-converter-plan.md](docs/part-converter-plan.md), starting from `spike/prepare_parts.py`.
+4. **Phase 4, `wiring-parts`** (D14): first the `part inspect` and `part convert` command line per
+   [docs/part-converter-plan.md](docs/part-converter-plan.md) — done in `tools/c3dparts/` (Python + CadQuery,
+   14 tests on a generated STEP; on the Claudemètre's MRD076A it matches the spike within 0.007 mm and flags
+   complex models for simplification); then the
+   catalog snapshot; then the skill (model files in the project and stand-ins), tested by a fresh agent on the
+   Claudemètre copy; then online search and modelling.
 5. **Phase 5, project builder**: Markdown to `.c3dproj` with clean routing, layout hints, automatic placement
    that retries blocked routes, and merge of manual edits.
 6. Then phases 6 to 8 below.
@@ -191,7 +199,8 @@ Last update: 2026-11-16. Resume from here.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
 5. **Project builder** — Markdown to `.c3dproj` with automatic layout and routing; merge with manual edits.
 6. **Rendering CLI** — `render` with MP4, WebP and poster outputs.
-7. **Skills and MCP server** — `wiring-plan`, `wiring-parts`, `wiring-video`; packaging, `init` and `uninstall`.
+7. **Skills and MCP server** — `wiring-video` (`wiring-plan` is done in phase 3, `wiring-parts` in phase 4); the MCP
+   server; packaging, `init` and `uninstall`.
 8. **Reference project end to end**, then the remaining upstream issues and pull requests.
 
 ## Open questions
@@ -202,9 +211,9 @@ Last update: 2026-11-16. Resume from here.
 3. ~~How the CLI gets Circuit Studio~~ — answered by D9.
 4. Quality of automatic 3D layout on a real circuit; how much manual placement is acceptable.
 5. Parts stacked on others (a board plugged onto a terminal adapter) and inline parts (a diode in series).
-6. Content of `.circuitstudio/` (D13). Proposed: `wiring.json` (only the kit reads it). Candidates: an
-   integration log (steps done, choices made, what `init` installed, which `uninstall` reads), the prepared parts (`.c3dcomponent` + light GLB), the
-   generated `.c3dproj`, preview frames. To settle per file: committed or not (`wiring.json` must be committed
+6. Content of `.circuitstudio/` (D13). Decided: `catalog.json` and `parts/<id>/` (D14). Proposed:
+   `wiring.json` (only the kit reads it). Candidates: an integration log (steps done, choices made, what `init`
+   installed, which `uninstall` reads), the generated `.c3dproj`, preview frames. To settle per file: committed or not (`wiring.json` must be committed
    for rendering without Claude; parts derived from third-party STEP files may not be publishable).
 
 ## Risks
