@@ -1,21 +1,21 @@
 ---
 name: wiring-project
-description: Turn a validated wiring document (wiring.md) whose parts are ready into the Circuit Studio project of a wiring video - first resolving it into .circuitstudio/wiring.json (every wire end mapped to a real pin of a prepared, built-in or stand-in part), then building the project. Third step of a wiring video, after wiring-plan and wiring-parts. Use when the user wants their wiring turned into a Circuit Studio project or a wiring.json, or wants it updated after the wiring document changed.
+description: Turn a validated wiring document (wiring.md) whose parts are ready into the Circuit Studio project of a wiring video - resolving it into .circuitstudio/wiring.json (every wire end mapped to a real pin of a prepared, built-in or stand-in part), building .circuitstudio/project.c3dproj (parts placed, every wire routed) and reviewing it with the user until they validate it, keeping the edits they make in Circuit Studio. Third step of a wiring video, after wiring-plan and wiring-parts. Use when the user wants their wiring turned into a Circuit Studio project, wants it updated after the wiring document changed, or wants parts of the generated project moved.
 ---
 
 # wiring-project
 
 Third step of a wiring video: `wiring-plan` wrote and validated the wiring document, `wiring-parts` gave each
 of its parts a 3D part with its pins. This skill resolves the document into `.circuitstudio/wiring.json`, the
-file the command line builds and renders from without an LLM, then builds the Circuit Studio project, which
-`wiring-video` renders.
+file the command line builds and renders from without an LLM, builds the Circuit Studio project
+`.circuitstudio/project.c3dproj` from it, and reviews the project with the user; `wiring-video` renders it.
 
 ```text
-1 check the inputs → 2 resolve into wiring.json → (questions) → 3 check → 4 report → [5 build the project: later]
+1 check the inputs → 2 resolve into wiring.json → (questions) → 3 check → 4 build → 5 review (loop) → 6 report
 ```
 
-**This version stops after `wiring.json`.** Building the Circuit Studio project (`<kit> build`: placement, wire
-routes, camera, presentation texts, review with the user) comes in a later version: say so in the report.
+**What matters at this step**: every wire connected to the right pin and routed, parts placed so the wires are
+easy to follow. The user can rearrange the project by hand in Circuit Studio; a new build keeps those edits.
 
 Talk to the user in their language. Everything written to files is in English.
 
@@ -27,6 +27,7 @@ Talk to the user in their language. Everything written to files is in English.
 |---|---|
 | `<kit> part pins <part id>...` | Pins of prepared parts (`.circuitstudio/parts/`) and built-in parts (`.circuitstudio/catalog.json`), one line each: identifier, label, silkscreen, aliases |
 | `<kit> wiring [--wires] [--json]` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, and whether the document changed since; exit code 1 and one line per problem, with the document line. `--wires` also lists every wire as written and as resolved |
+| `<kit> build [--move "<part>=x,y[,rotation]"]... [--reset <part>]... [--dry-run] [--from <folder>] [--json]` | Generates `.circuitstudio/project.c3dproj` from `wiring.json` and the parts; places the parts, plans every route with Circuit Studio's planner, keeps the user's edits; exit code 1 when wires stay blocked. `--move` places a part as the user asks (kept like an edit), `--reset` gives a part back to build, `--dry-run` writes nothing |
 
 **The user only sees your messages when you stop.** Ask all your questions in one message.
 
@@ -35,7 +36,8 @@ Talk to the user in their language. Everything written to files is in English.
 - Find the wiring document (`wiring.md`, or the one the user names). If it still has an **Open points** section,
   or the user has not validated it, say so and ask whether to go on or to finish it with `wiring-plan` first.
 - If `.circuitstudio/wiring.json` exists, run `<kit> wiring`. When it reports no problem, the file is up to date
-  with the document: skip to the report (step 4) and say so. Otherwise resolve again from the whole document
+  with the document: run the `part pins` check below anyway (the parts may have changed), then skip to the build
+  (step 4) and say so. Otherwise resolve again from the whole document
   (step 2): the answers the user gave earlier are in the document, so unchanged rows give the same result.
 - Run `<kit> part pins` with every *Part* identifier of the document that is not a stand-in, once. An identifier
   it does not find is a part `wiring-parts` has not prepared yet: stop and offer to run `wiring-parts` first.
@@ -56,12 +58,72 @@ The command only knows that a pin exists, not that it is the right one: read the
 document (each reference as written, the pin it became and that pin's label) and fix any wire whose label does
 not fit what the document says.
 
-## 4. Report
+## 4. Build
+
+Run `<kit> build` (it checks `wiring.json` first and refuses it while `wiring` reports problems). It prints each
+part and how it was placed, then the routes:
+
+- `layout`: from the document's *Layout* table; `automatic`: placed by build, next to the pins its wires come
+  from, parts lying flat turned to face them, parts standing up (panel meters) never turned; `moved`: placed as
+  the user asked (`--move`); `kept`: where the user put it, in Circuit Studio or with an earlier `--move` (build
+  never moves those again, until `--reset`).
+- The route planner is Circuit Studio's own, taken from the local checkout the catalog snapshot came from (its
+  path ends the routes line).
+- `routes: N wires, none blocked`: every wire found a route with the planner Circuit Studio itself uses. Blocked
+  wires are listed with their document line: the project is written anyway, but a blocked wire is drawn without
+  a route in Circuit Studio. Never leave one: propose a move in the review (step 5).
+
+**Errors** to handle:
+
+- *needs a local Circuit Studio checkout*: the route planner comes from Circuit Studio's sources, and the catalog
+  snapshot did not come from a local checkout. Ask the user where their checkout is (`--from <folder>`); without
+  one, offer to clone `https://github.com/arslansadiq87/circuit-studio` (network: ask first, D15).
+- *converted by an older kit*: a prepared part must be converted again (`<kit> part convert` on its `part.yaml`,
+  as in `wiring-parts`); say which and do it with the user's agreement.
+
+## 5. Review
+
+The user checks the project in Circuit Studio itself; this version shows no images of its own. Tell them how,
+in one message, with the build's summary (parts and how they were placed, routes):
+
+- Open Circuit Studio: their local copy, or the hosted site `https://arslansadiq87.github.io/circuit-studio/`
+  (everything runs in their browser; the file is not uploaded anywhere). **Open**, then
+  `.circuitstudio/project.c3dproj`.
+- What to look at: every part there and posed as expected, every wire on the right terminal (the *Connections*
+  table lists them), wires easy to follow, nothing overlapping.
+- Two ways to change it:
+  - **in words** ("put the display above the board", "turn the strip"): build with
+    `--move "<part name>=x,y[,rotation]"` (the document's part name; mm, top view: x to the right, y away from the
+    viewer; degrees around the vertical, counterclockwise seen from above). The build output gives each part's
+    current position to start from. Such a move counts as the user's edit and stays.
+  - **back to the document's placement or to build's**: `--reset <part name>`. Use it too when a requested move
+    only brings a part back to its *Layout* row, so a later change of that row still applies.
+  - **in the editor**: they move parts or reshape wires, **Save**, and put the saved file in place of
+    `.circuitstudio/project.c3dproj`. The next build keeps their positions, rotations, wire shapes and camera.
+- Changes of wiring (a pin, a colour, a part) go into the document, not the project: then resolve and build again
+  (steps 2 to 4).
+
+**Blocked wires**: try a few moves with `--dry-run` first (nothing is written; a build with blocked wires takes
+10 to 15 s): the parts of the blocked wire and their neighbours, a little further out or turned. After about five
+tries without a fully routed layout, stop and show the user what you tried and the best result. Propose only a
+layout you have built (not dry-run) and seen fully routed, and say which of the user's moves it changes.
+
+After each change, build again and show only what changed (placements, routes). The project is done only on an
+explicit "ok" from the user; never take silence or a new topic as one.
+
+## 6. Report
 
 In a few lines: the number of parts (by kind: built-in, prepared, stand-in) and of wires, the pins resolved
 through a label, an alias or the document's own explanations (grouped by part, so the user can check them:
-"Display: CLK P1, DIO P2, VCC P3, GND P4"), the answers written into the document, and what remains:
+"Display: CLK P1, DIO P2, VCC P3, GND P4"), the answers written into the document, the project file and its
+routes, and what remains:
 
 - **Committing**: `wiring.json` is meant to be committed with the project, since the command line renders from it.
-  If git ignores it (`git check-ignore .circuitstudio/wiring.json`), say so and let the user decide.
-- **Next step**: building the Circuit Studio project, in a later version of this skill.
+  `project.c3dproj` embeds the prepared parts' models, often derived from third-party files that may not be
+  redistributable (as `wiring-parts` said about the parts, in `.circuitstudio/parts/`), and `build.json` only
+  matters next to it. Check what git ignores (`git check-ignore .circuitstudio/*` and `.circuitstudio/parts`), say
+  what would be committed, and let the user decide; offer to add `.circuitstudio/project.c3dproj`,
+  `.circuitstudio/build.json` (and `.circuitstudio/parts/` if `wiring-parts` did not settle it) to `.gitignore` if
+  they want to keep them local. Never decide it for them.
+- **Next step**: `wiring-video` renders the video (planned); until then, Circuit Studio's own **Auto Video**
+  renders the opened project.

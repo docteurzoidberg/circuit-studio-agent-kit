@@ -11,7 +11,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test tools/catalog/*.test.ts tools/parts/*.test.ts tools/wiring/*.test.ts",
+    "test": "node --test tools/catalog/*.test.ts tools/parts/*.test.ts tools/wiring/*.test.ts tools/project/*.test.ts",
     "typecheck": "tsc -p ."
   },
   "dependencies": {

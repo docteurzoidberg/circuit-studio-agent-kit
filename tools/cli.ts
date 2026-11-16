@@ -7,6 +7,7 @@ import {parseArgs} from 'node:util';
 import {catalog, describe, type CatalogOptions} from './catalog/catalog.ts';
 import {convertCommand, inspectCommand, type PartOptions} from './parts/commands.ts';
 import {projectRoot} from './project.ts';
+import {build, formatBuild} from './project/build.ts';
 import {checkWiring, formatReport} from './wiring/check.ts';
 import {formatPins, PartLibrary} from './wiring/pins.ts';
 
@@ -25,17 +26,25 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
   wiring [--wires] [--json]
       checks .circuitstudio/wiring.json: schema, parts and pins, source document unchanged;
       exit code 1 when there are problems; --wires lists every wire as written and as resolved
+  build [--from <circuit-studio folder>] [--move "<part name>=x,y[,rotation]"]... [--reset <part name>]...
+        [--dry-run] [--json]
+      generates .circuitstudio/project.c3dproj from wiring.json and the parts, keeping the edits made
+      in Circuit Studio; --move places a part as the user asks (kept like an edit), --reset gives a part
+      back to automatic or layout placement, --dry-run writes nothing (to try placements); plans the
+      routes with Circuit Studio's planner (from the catalog's checkout, or --from); exit code 1 when
+      wires stay blocked
 
-  planned: init, uninstall, mcp, check, build, render`;
+  planned: init, uninstall, mcp, check, render`;
 
 const OPTIONS = {
   json: {type: 'boolean'}, out: {type: 'string'}, preview: {type: 'string'}, 'no-preview': {type: 'boolean'},
   from: {type: 'string'}, download: {type: 'boolean'}, ref: {type: 'string'}, force: {type: 'boolean'},
-  wires: {type: 'boolean'},
+  wires: {type: 'boolean'}, reset: {type: 'string', multiple: true}, move: {type: 'string', multiple: true},
+  'dry-run': {type: 'boolean'},
   help: {type: 'boolean', short: 'h'},
 } as const;
 
-type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean};
+type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean; reset?: string[]; move?: string[]; 'dry-run'?: boolean};
 
 /** Where the command line runs and writes (the tests give their own). */
 export interface Io {
@@ -90,6 +99,13 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
       const report = checkWiring(projectRoot(cwd), {wires: options.wires});
       out(options.json ? JSON.stringify(report, null, 1) : formatReport(report));
       return report.problems.length ? 1 : 0;
+    }
+    if (command === 'build') {
+      if (args.length) throw new UsageError('build takes no argument');
+      const report = await build(projectRoot(cwd), {from: options.from, reset: options.reset, move: options.move,
+        dryRun: options['dry-run']});
+      out(options.json ? JSON.stringify(report, null, 1) : formatBuild(report));
+      return report.blocked.length ? 1 : 0;
     }
     if (command !== 'part') throw new UsageError(`unknown command: ${command}`);
     out(await part(args, options, cwd));

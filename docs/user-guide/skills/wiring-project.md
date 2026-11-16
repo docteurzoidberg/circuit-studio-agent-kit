@@ -1,19 +1,21 @@
 # wiring-project — user guide
 
-> First part (2026-11-16): resolving the wiring document into `wiring.json`, tested on the Claudemètre. Building
-> the Circuit Studio project comes next. This page follows the skill:
+> First version (2026-11-16), tested on the Claudemètre: resolving the wiring document into `wiring.json`,
+> building the Circuit Studio project and reviewing it with you in Circuit Studio. This page follows the skill:
 > [skills/wiring-project/](../../../skills/wiring-project/).
 
 `wiring-project` is the third step, after [`wiring-plan`](wiring-plan.md) has produced a validated wiring
 document and [`wiring-parts`](wiring-parts.md) has given each part a 3D model. It turns the document into
-`.circuitstudio/wiring.json`, the file the command line builds and renders from without an LLM, then (in a later
-version) builds the Circuit Studio project and reviews it with you.
+`.circuitstudio/wiring.json`, the file the command line builds and renders from without an LLM, then builds the
+Circuit Studio project `.circuitstudio/project.c3dproj` and reviews it with you until you validate it.
 
 ## Starting it
 
 Until the kit's package exists, copy [skills/wiring-project/](../../../skills/wiring-project/) into your
 project's `.claude/skills/` folder (or `~/.claude/skills/`), and keep a checkout of the kit: the skill runs its
-command line with Node 22 (`node <kit>/tools/cli.ts ...`). Then ask for it in your own words ("turn my wiring into
+command line with Node 22 (`node <kit>/tools/cli.ts ...`). Building the project also needs a local copy of Circuit
+Studio for now (its route planner comes from its sources): the one `wiring-parts` took the catalog from, or one
+you name. Then ask for it in your own words ("turn my wiring into
 the Circuit Studio project") or type `/wiring-project`.
 
 ## How it works
@@ -29,7 +31,10 @@ flowchart TD
   ASK --> R
   Q -- no --> J[.circuitstudio/wiring.json]
   J --> C[wiring --wires: schema, parts, pins,<br/>document unchanged; list of wires]
-  C --> REP
+  C --> B[build: parts placed, every wire routed<br/>.circuitstudio/project.c3dproj]
+  B --> V{You check it<br/>in Circuit Studio}
+  V -- move parts in words<br/>or in the editor --> B
+  V -- ok --> REP
 ```
 
 - **Your document keeps its own names.** You write `Board GPIO4` or `Display CLK`; the skill finds the pin they
@@ -48,8 +53,28 @@ flowchart TD
 
 - **When the document changes**, run the skill again: it sees that `wiring.json` no longer matches and resolves
   it again from the whole document.
+- **The project is built for you.** `build` places the parts (from the document's *Layout* table if it has
+  one, otherwise next to the pins their wires come from; panel meters keep facing you) and routes every wire with
+  the planner Circuit Studio itself uses, so a wire it reports as routed is routed in Circuit Studio too:
+
+  ```text
+  .circuitstudio/project.c3dproj: 8 parts, 16 wires, 13.0 MB
+    Board          automatic  x 0, y 0, 0°
+    Session gauge  automatic  x 81.3, y -28.2, 0°
+    ...
+  routes: 16 wires, none blocked (1.5 s)
+  ```
+
+- **You check it in Circuit Studio**: open `.circuitstudio/project.c3dproj` there (your local copy or the hosted
+  site; the file stays in your browser). Ask for changes in words ("put the display above the board"), or move
+  things yourself in the editor, **Save**, and put the saved file in place of the project. Every later build keeps
+  what you moved, the wire shapes you changed and your camera, until you ask to give a part back to the automatic
+  or *Layout* placement; what you never touched is placed again, so a new *Layout* hint in the document still
+  applies. When a move blocks a wire, the skill tries a few others before asking you. Wiring changes (a pin, a
+  colour) go into the document.
 - **`wiring.json` is meant to be committed** with your project, since the command line renders from it. The
-  skill tells you if git ignores it.
+  project file embeds the parts' models, which may come from third-party files: the skill tells you what git
+  would commit and lets you decide.
 
 ## Tested on
 
@@ -58,7 +83,14 @@ A fresh agent, with no knowledge of the project, ran the skill on a copy of the
 2 stand-ins): 8 parts, 16 wires and 8 placements resolved without a question, the same wiring as
 [examples/claudemetre/wiring.json](../../../examples/claudemetre/wiring.json).
 
+A second fresh agent then built and reviewed the project on the same copy: every part placed from the document's
+*Layout* table and every wire routed; asked in words to bring the step-down converter closer and turn the LED
+strip, it found that both moves together blocked a wire, tried other positions, and settled with the user on a
+layout where every wire routes. Its run found a defect since fixed (an edit was kept by one build only) and led to
+the `--move`, `--dry-run` and `--reset` options.
+
 ## What comes next
 
-Building the Circuit Studio project from `wiring.json` (placement, wire routes, camera, presentation texts) and
-reviewing it with you, then [`wiring-video`](../../../README.md#skills) renders the video.
+[`wiring-video`](../../../README.md#skills) renders the video from the validated project (planned); until then,
+Circuit Studio's own **Auto Video** renders it. Preview images in the review and presentation texts come with
+the rendering.

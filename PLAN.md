@@ -43,6 +43,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D19 | **No Python left in the kit's tools** (2026-11-16): the Python part tools (`tools/c3dparts/`) are removed, superseding the part of D16 that kept them as the test reference. Porting them was validated (same outputs on the fixture and the Claudemètre parts), and keeping them meant making every converter change twice. Their outputs stay as the expected values of the tests (`tools/parts/test/fixtures/*.reference.json`), regenerated on purpose only when an output changes by design; the fixture STEP is written by `tools/parts/test/fixture.ts` (same `inspect` and `convert` outputs as the CadQuery one). The spike's Python scripts stay until the `render` command replaces `spike/serve.py`. |
 | D17 | **The kit is written in TypeScript** (2026-11-16), like Circuit Studio, so agents and contributors read one language across both projects. Node 22 runs the `.ts` files directly (type stripping, erasable syntax only, imports ending in `.ts`); `npm run typecheck` checks them with `tsc`; the published package will be a built bundle. |
 | D20 | **`wiring-project` resolves the document into `wiring.json`** (2026-11-16), as its first step, instead of a second run of `wiring-plan` after the parts: the user goes straight from `wiring-parts` to `wiring-project`, and every build checks that `wiring.json` still matches its document. The skill reads the Markdown (D3) and looks pins up with `part pins` (prepared parts and the catalog snapshot, no `.c3dcomponent` to read); the CLI `wiring` checks the result with ajv against the schema, then parts, pins and the document's hash. Answers to ambiguities go into `wiring.md`, so a new resolution gives the same file. |
+| D21 | **`build` plans routes with Circuit Studio's own planner, run in Node** (2026-11-16): the project schema, the built-in part templates and the route planner (`src/model.ts`, `src/autoRouting.ts`) are bundled with esbuild from a local Circuit Studio checkout (the catalog snapshot's, or `--from`) into the kit's `.cache/engine/`, as `part catalog` already does, so `build` needs no browser and checks the routes the app will draw. The same planner is proposed upstream as `planRoutes()` in the automation API; `build` moves to it once upstream has it. Placement: layout hints, else the most connected part at the centre and each other part next to the pins its wires leave from (scored by orthogonal length and parts crossed); flat parts may turn, parts standing up keep the pose `wiring-parts` gave them; parts of blocked wires are moved a few times. Edits made in Circuit Studio win: `.circuitstudio/build.json` records what `build` wrote, so a placement, wire shape or camera that differs is the user's and is kept; the document still decides connections and colours. The review is done by the user in Circuit Studio until the browser driver of `render` can show images. |
 
 ## Architecture
 
@@ -217,9 +218,19 @@ Last update: 2026-11-16. Resume from here.
    identical meshes and can make the file larger; a check of each part in Circuit Studio itself, through the
    automation API's `openProject` and `renderImage` on a small project holding the part (projects embed their
    parts' models, so no import call is needed). Then online search and modelling.
-5. **Phase 5, `wiring-project`**: the CLI `build` (`wiring.json` and parts to `.c3dproj`, clean routing, layout
-   hints, automatic placement that retries blocked routes, merge of manual edits), then the skill and its review
-   loop, tested by a fresh agent on the Claudemètre copy.
+5. **Phase 5, `wiring-project`** — first version done on 2026-11-16 (D21): the CLI `build` (`wiring.json` and
+   parts to `.c3dproj`, clean routing, layout hints, automatic placement that moves the parts of blocked wires,
+   edits made in Circuit Studio kept through `build.json`, `--move`, `--reset`, `--dry-run`), 12 tests; on the Claudemètre (6 prepared parts, 2
+   stand-ins, 16 wires) the automatic layout routes every wire in 1.5 s and the project opens in Circuit Studio
+   (fork build) with its models, no validation error and no blocked wire; then the skill's build and review
+   steps, tested by a fresh agent on the Claudemètre copy (layout from the document, two moves asked in words,
+   a blocked wire solved with the user, project validated; it found that an edit was kept by one build only,
+   fixed, and asked for `--move` and `--dry-run`, added). Found on the way and fixed: the converter placed every instance of a repeated STEP shape on the first
+   one (the MRD076A board measured 110.7 x 140.6 mm instead of 73.6 x 84.7 mm), with a regression test. Routing a
+   whole project costs seconds (11 s for the 28 wires of the upstream fixture), so placement is scored without
+   routing and the planner runs once per attempt. For later: preview images in the review (with the browser
+   driver of phase 6), presentation texts, stand-ins drawn with visible contacts, and a look at why turning the
+   LED strip stand-in (pins exiting upwards) blocked a wire between two other parts in the test.
 6. Then phases 6 to 8 below.
 
 ## Phases
@@ -231,8 +242,8 @@ Last update: 2026-11-16. Resume from here.
 3. **Document format** — done 2026-11-16: Markdown template read by the skill, resolved `wiring.json` and its
    schema, CLI `part pins` and `wiring`; tested on the reference project's wiring.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
-5. **Project** — CLI `build` (`wiring.json` to `.c3dproj`) with automatic layout and routing, merge with manual
-   edits; the `wiring-project` skill.
+5. **Project** — first version done 2026-11-16: CLI `build` (`wiring.json` to `.c3dproj`) with automatic layout and
+   routing, merge with manual edits; the `wiring-project` skill.
 6. **Rendering CLI** — `render` with MP4, WebP and poster outputs.
 7. **Skills and MCP server** — `wiring-video` (`wiring-plan` is done in phase 3, `wiring-parts` in phase 4,
    `wiring-project` in phase 5); the MCP
