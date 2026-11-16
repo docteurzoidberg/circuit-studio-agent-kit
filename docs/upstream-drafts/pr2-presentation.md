@@ -1,7 +1,7 @@
 # PR 2 (F2): presentation settings stored in the project
 
-> **Not published yet.** Work in progress on the local fork branch `feat/presentation-in-project` (commit
-> `d9e6c08`, on top of upstream `47b06b3`; independent of #2 and #4). The texts below are what we plan to send;
+> **Not published yet.** Work in progress on the fork branch
+> [`feat/presentation-in-project`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project) (commit `d9e6c08`, on top of upstream `47b06b3`; independent of #2 and #4). The texts below are what we plan to send;
 > they will change if the maintainer prefers another shape after the first two pull requests.
 
 ## Issue
