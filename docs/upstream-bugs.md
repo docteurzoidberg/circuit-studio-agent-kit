@@ -11,4 +11,5 @@ Reference: upstream `main` at `47b06b3`, hosted site https://arslansadiq87.githu
 | 4 | Hosted build | After opening the upstream fixture `tests/fixtures/crowded-c6-project.json`, the 3D view stays on "Loading 3D workspace…"; once, the page reloaded by itself right after Open | Not investigated; possibly a consequence of #1 |
 | 6 | Video export | Exporting the upstream fixture `crowded-c6-project.json` fails with "No model asset reference", even after Open | Saved model components carry no `modelUrl`; `modelUrl()` in `src/modelCache.ts` does not fall back to the catalog by `modelId` |
 | 7 | Rendering | The label printed on the external 5 V supply box appears mirrored in the video's final overview | Not investigated |
+| 8 | Tests | `npm run test` on `main`: 36 failing tests in 13 files (`Cannot read properties of undefined`, "Add visible components before generating a video") | Tests assume the editor starts with the starter circuit; `initialProject` is now an empty "Untitled Simulation" |
 | 5 | Docs | `docs/TESTING.md` contains invalid UTF-8; `docs/PIN_MAPPING.md` shows `?` in place of characters (`D?`, `62.74 ? 25.40`) | Encoding corruption |
