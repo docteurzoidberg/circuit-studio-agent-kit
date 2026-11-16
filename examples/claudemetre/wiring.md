@@ -1,9 +1,9 @@
 # Claudemètre — wiring
 
 <!--
-Example of a wiring document as the `wiring-plan` skill is meant to write it. It is the single input of the
-next steps: `wiring-parts` prepares the 3D parts listed under "Parts", and `wiring-video` builds the Circuit
-Studio project (claudemetre.c3dproj, next to this file) from "Parts", "Connections" and "Layout".
+Example of a wiring document as the `wiring-plan` skill is meant to write it; it also serves as the template.
+The skill resolves it into wiring.json (next to this file), the input of the next steps: `wiring-parts`
+prepares the 3D parts, and `wiring-video` builds the Circuit Studio project (claudemetre.c3dproj) from it.
 Only the "Parts" and "Connections" tables are required; every other section is optional.
 -->
 

@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/docteurzoidberg/circuit-studio-agent-kit/schema/wiring.schema.json",
+  "title": "Resolved wiring",
+  "description": "Wiring of one project, resolved from its Markdown wiring document by the wiring skills. Committed next to the document; the CLI builds and renders the Circuit Studio project from this file alone, without an LLM. First version: fields are added as the next phases need them.",
+  "type": "object",
+  "required": ["version", "source", "parts", "connections"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "title": { "type": "string" },
+    "source": {
+      "description": "The Markdown document this file was resolved from. The CLI recomputes the hash and reports a stale file when the document changed since.",
+      "type": "object",
+      "required": ["path", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "description": "Path of the Markdown document, relative to this file." },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/part" }
+    },
+    "connections": {
+      "description": "In the order in which the video connects the wires.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/connection" }
+    },
+    "layout": {
+      "description": "Optional placement hints, top view, in millimetres from the origin; rotation in degrees around the vertical axis. Parts not listed are placed automatically.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/placement" }
+    }
+  },
+  "$defs": {
+    "line": {
+      "description": "Line of the Markdown document this entry comes from (1-based), for messages.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "part": {
+      "type": "object",
+      "required": ["name", "kind", "line"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "description": "Name used in the document, unique in the project." },
+        "kind": {
+          "enum": ["catalog", "prepared", "stand-in"],
+          "description": "catalog: built-in Circuit Studio model (modelId). prepared: part produced by wiring-parts (ref). stand-in: plain box with the listed pins, until a model exists."
+        },
+        "modelId": { "type": "string", "description": "Circuit Studio built-in model, for kind catalog." },
+        "ref": { "type": "string", "description": "Prepared part identifier, for kind prepared." },
+        "model": { "type": "string", "description": "Source model file (STEP, GLB) in the user's project, if any." },
+        "size": {
+          "description": "Box size in mm (width, height, thickness), for kind stand-in.",
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "pins": {
+          "description": "Pin identifiers of a stand-in, in order.",
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "note": { "type": "string" },
+        "line": { "$ref": "#/$defs/line" }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "catalog" } } }, "then": { "required": ["modelId"] } },
+        { "if": { "properties": { "kind": { "const": "prepared" } } }, "then": { "required": ["ref"] } },
+        { "if": { "properties": { "kind": { "const": "stand-in" } } }, "then": { "required": ["size", "pins"] } }
+      ]
+    },
+    "end": {
+      "type": "object",
+      "required": ["part", "pin"],
+      "additionalProperties": false,
+      "properties": {
+        "part": { "type": "string", "description": "Part name, as in parts[].name." },
+        "pin": { "type": "string", "description": "Pin identifier in the part definition (not a label or an alias)." },
+        "text": { "type": "string", "description": "The reference as written in the document." }
+      }
+    },
+    "connection": {
+      "type": "object",
+      "required": ["from", "to", "line"],
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "type": "string",
+          "description": "Wire colour: a name (black, red, orange, blue, purple, green, brown, yellow, white) or #rrggbb.",
+          "pattern": "^(black|red|orange|blue|purple|green|brown|yellow|white|#[0-9a-fA-F]{6})$"
+        },
+        "from": { "$ref": "#/$defs/end" },
+        "to": {
+          "description": "One or more destinations; several destinations give one wire each, from the same source.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/end" },
+          "minItems": 1
+        },
+        "note": { "type": "string" },
+        "line": { "$ref": "#/$defs/line" }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "required": ["part", "x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "part": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "rotation": { "type": "number", "default": 0 },
+        "line": { "$ref": "#/$defs/line" }
+      }
+    }
+  }
+}

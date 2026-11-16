@@ -1,0 +1,457 @@
+{
+  "$schema": "../../schema/wiring.schema.json",
+  "version": 1,
+  "title": "Claudemètre",
+  "source": {
+    "path": "wiring.md",
+    "sha256": "d9b574d674f759f26607edbaecf6b227c3b53144da912e22b93357ef31acf5ca"
+  },
+  "parts": [
+    {
+      "name": "Board",
+      "kind": "prepared",
+      "ref": "mrd076a-esp32-s3",
+      "model": "design/references/mrd076a/MDR076A+ESP32-S3.STEP",
+      "note": "ESP32-S3-DevKitC-1 N16R8 on the MRD076A",
+      "line": 26
+    },
+    {
+      "name": "Session gauge",
+      "kind": "prepared",
+      "ref": "so-45",
+      "model": "design/references/so45/so-45-voltmeter.step",
+      "note": "full scale lowered to ~3 V (6.2 kΩ inside)",
+      "line": 27
+    },
+    {
+      "name": "Week gauge",
+      "kind": "prepared",
+      "ref": "so-45",
+      "model": "design/references/so45/so-45-voltmeter.step",
+      "note": "same as the session gauge",
+      "line": 28
+    },
+    {
+      "name": "Display",
+      "kind": "prepared",
+      "ref": "tm1637",
+      "model": "design/references/tm1637/Display_4-Didi_LED_TM1637.stp",
+      "note": "4-digit 0.56\" module, powered at 3.3 V",
+      "line": 29
+    },
+    {
+      "name": "Strip",
+      "kind": "stand-in",
+      "size": [
+        28,
+        10,
+        2
+      ],
+      "pins": [
+        "+5V",
+        "DIN",
+        "GND"
+      ],
+      "note": "4 × WS2812B, 144 LED/m; wires soldered",
+      "line": 30
+    },
+    {
+      "name": "D1",
+      "kind": "stand-in",
+      "size": [
+        9,
+        4,
+        4
+      ],
+      "pins": [
+        "A",
+        "K"
+      ],
+      "note": "1N400x, soldered at the strip's +5V input",
+      "line": 31
+    },
+    {
+      "name": "Buck",
+      "kind": "stand-in",
+      "size": [
+        22,
+        17,
+        4
+      ],
+      "pins": [
+        "IN+",
+        "IN-",
+        "OUT+",
+        "OUT-"
+      ],
+      "note": "Mini360 step-down, 12 V to 5 V",
+      "line": 32
+    },
+    {
+      "name": "Power socket",
+      "kind": "prepared",
+      "ref": "lp16-2pole",
+      "model": "design/references/lp16/LP-16-2pole.step",
+      "note": "12 V input on the side plate (1 = +12 V)",
+      "line": 33
+    },
+    {
+      "name": "Fuse",
+      "kind": "prepared",
+      "ref": "fuse-holder",
+      "model": "design/references/fusible/fuse_holder.step",
+      "note": "protects the 12 V input",
+      "line": 34
+    }
+  ],
+  "connections": [
+    {
+      "color": "orange",
+      "from": {
+        "part": "Power socket",
+        "pin": "1",
+        "text": "Power socket 1"
+      },
+      "to": [
+        {
+          "part": "Fuse",
+          "pin": "END",
+          "text": "Fuse END"
+        }
+      ],
+      "note": "+12 V",
+      "line": 43
+    },
+    {
+      "color": "orange",
+      "from": {
+        "part": "Fuse",
+        "pin": "SIDE",
+        "text": "Fuse SIDE"
+      },
+      "to": [
+        {
+          "part": "Buck",
+          "pin": "IN+",
+          "text": "Buck IN+"
+        }
+      ],
+      "note": "+12 V fused",
+      "line": 44
+    },
+    {
+      "color": "black",
+      "from": {
+        "part": "Power socket",
+        "pin": "2",
+        "text": "Power socket 2"
+      },
+      "to": [
+        {
+          "part": "Buck",
+          "pin": "IN-",
+          "text": "Buck IN-"
+        }
+      ],
+      "note": "0 V",
+      "line": 45
+    },
+    {
+      "color": "red",
+      "from": {
+        "part": "Buck",
+        "pin": "OUT+",
+        "text": "Buck OUT+"
+      },
+      "to": [
+        {
+          "part": "Board",
+          "pin": "J1-21",
+          "text": "Board 5V"
+        }
+      ],
+      "note": "5 V into the board (USB not used)",
+      "line": 46
+    },
+    {
+      "color": "black",
+      "from": {
+        "part": "Buck",
+        "pin": "OUT-",
+        "text": "Buck OUT-"
+      },
+      "to": [
+        {
+          "part": "Board",
+          "pin": "J1-22",
+          "text": "Board J1-22 (GND)"
+        }
+      ],
+      "line": 47
+    },
+    {
+      "color": "blue",
+      "from": {
+        "part": "Board",
+        "pin": "J1-4",
+        "text": "Board GPIO4"
+      },
+      "to": [
+        {
+          "part": "Session gauge",
+          "pin": "+",
+          "text": "Session gauge +"
+        }
+      ],
+      "note": "PWM 25 kHz, 1.2 mA max",
+      "line": 48
+    },
+    {
+      "color": "purple",
+      "from": {
+        "part": "Board",
+        "pin": "J1-5",
+        "text": "Board GPIO5"
+      },
+      "to": [
+        {
+          "part": "Week gauge",
+          "pin": "+",
+          "text": "Week gauge +"
+        }
+      ],
+      "note": "PWM 25 kHz, 1.2 mA max",
+      "line": 49
+    },
+    {
+      "color": "black",
+      "from": {
+        "part": "Board",
+        "pin": "J3-21",
+        "text": "Board J3-21 (GND)"
+      },
+      "to": [
+        {
+          "part": "Session gauge",
+          "pin": "-",
+          "text": "Session gauge -"
+        }
+      ],
+      "line": 50
+    },
+    {
+      "color": "black",
+      "from": {
+        "part": "Board",
+        "pin": "J3-22",
+        "text": "Board J3-22 (GND)"
+      },
+      "to": [
+        {
+          "part": "Week gauge",
+          "pin": "-",
+          "text": "Week gauge -"
+        }
+      ],
+      "line": 51
+    },
+    {
+      "color": "green",
+      "from": {
+        "part": "Board",
+        "pin": "J1-6",
+        "text": "Board GPIO6"
+      },
+      "to": [
+        {
+          "part": "Display",
+          "pin": "CLK",
+          "text": "Display CLK"
+        }
+      ],
+      "line": 52
+    },
+    {
+      "color": "brown",
+      "from": {
+        "part": "Board",
+        "pin": "J1-7",
+        "text": "Board GPIO7"
+      },
+      "to": [
+        {
+          "part": "Display",
+          "pin": "DIO",
+          "text": "Display DIO"
+        }
+      ],
+      "line": 53
+    },
+    {
+      "color": "orange",
+      "from": {
+        "part": "Board",
+        "pin": "J1-1",
+        "text": "Board J1-1 (3V3)"
+      },
+      "to": [
+        {
+          "part": "Display",
+          "pin": "VCC",
+          "text": "Display VCC"
+        }
+      ],
+      "note": "3.3 V, not 5 V",
+      "line": 54
+    },
+    {
+      "color": "black",
+      "from": {
+        "part": "Board",
+        "pin": "J3-1",
+        "text": "Board J3-1 (GND)"
+      },
+      "to": [
+        {
+          "part": "Display",
+          "pin": "GND",
+          "text": "Display GND"
+        }
+      ],
+      "line": 55
+    },
+    {
+      "color": "yellow",
+      "from": {
+        "part": "Board",
+        "pin": "J1-20",
+        "text": "Board GPIO14"
+      },
+      "to": [
+        {
+          "part": "Strip",
+          "pin": "DIN",
+          "text": "Strip DIN"
+        }
+      ],
+      "note": "3.3 V data, no level shifter",
+      "line": 56
+    },
+    {
+      "color": "red",
+      "from": {
+        "part": "Board",
+        "pin": "J1-21",
+        "text": "Board 5V"
+      },
+      "to": [
+        {
+          "part": "D1",
+          "pin": "A",
+          "text": "D1 A"
+        }
+      ],
+      "note": "ferrule shared with the buck output",
+      "line": 57
+    },
+    {
+      "color": "red",
+      "from": {
+        "part": "D1",
+        "pin": "K",
+        "text": "D1 K"
+      },
+      "to": [
+        {
+          "part": "Strip",
+          "pin": "+5V",
+          "text": "Strip +5V"
+        }
+      ],
+      "note": "diode soldered on the strip",
+      "line": 58
+    },
+    {
+      "color": "black",
+      "from": {
+        "part": "Board",
+        "pin": "J1-22",
+        "text": "Board J1-22 (GND)"
+      },
+      "to": [
+        {
+          "part": "Strip",
+          "pin": "GND",
+          "text": "Strip GND"
+        }
+      ],
+      "note": "ferrule shared with the buck output",
+      "line": 59
+    }
+  ],
+  "layout": [
+    {
+      "part": "Board",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "line": 72
+    },
+    {
+      "part": "Session gauge",
+      "x": -40,
+      "y": -105,
+      "rotation": 0,
+      "line": 73
+    },
+    {
+      "part": "Week gauge",
+      "x": 40,
+      "y": -105,
+      "rotation": 0,
+      "line": 74
+    },
+    {
+      "part": "Display",
+      "x": 0,
+      "y": 90,
+      "rotation": 180,
+      "line": 75
+    },
+    {
+      "part": "Strip",
+      "x": -80,
+      "y": 95,
+      "rotation": 0,
+      "line": 76
+    },
+    {
+      "part": "D1",
+      "x": -100,
+      "y": 62,
+      "rotation": 0,
+      "line": 77
+    },
+    {
+      "part": "Buck",
+      "x": -95,
+      "y": -40,
+      "rotation": 0,
+      "line": 78
+    },
+    {
+      "part": "Fuse",
+      "x": -150,
+      "y": -35,
+      "rotation": 0,
+      "line": 79
+    },
+    {
+      "part": "Power socket",
+      "x": -150,
+      "y": -95,
+      "rotation": 0,
+      "line": 80
+    }
+  ]
+}

@@ -22,7 +22,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 |---|---|
 | D1 | Rendering runs locally in a real Chrome with a GPU (on WSL: the Windows Chrome). Hosted CI rendering is not a goal. |
 | D2 | Source of truth is a **structured but free-form Markdown** wiring document, not a strict YAML file. |
-| D3 | The document is parsed **deterministically** by the CLI, without an LLM, so hooks and CI can render without Claude. |
+| D3 | The Markdown document is **read by the skills, not by a parser** (revised 2026-11-16). A skill resolves it into a committed `wiring.json` ([schema](schema/wiring.schema.json)); the CLI reads only that file, without an LLM, so hooks and CI can render without Claude. The JSON records the document's hash, so the CLI reports when it is stale. Template and JSON format evolve as the next phases need new fields. |
 | D4 | 3D parts (STEP, GLB, part definitions) live in the user's project; the user decides whether they may be published. |
 | D5 | Distribution is a single npm package with a CLI, in the style of REA: `npx <name> init`, `<name> render`, `<name> mcp`. A Claude Code plugin is evaluated as an alternative. |
 | D6 | Upstream changes are made in the fork first and proposed as pull requests later. |
@@ -39,9 +39,11 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 flowchart LR
   SRC[Project sources<br/>specs, schematic, firmware] --> A[wiring-plan skill]
   A --> DOC[Wiring document .md]
+  DOC --> A
+  A --> JSON[Resolved wiring.json]
   DOC --> B[wiring-parts skill]
   B --> PARTS[Parts in the project<br/>.c3dcomponent + models]
-  DOC --> C[wiring-video skill / MCP / CLI]
+  JSON --> C[wiring-video skill / MCP / CLI]
   PARTS --> C
   C --> PROJ[Generated .c3dproj<br/>layout, routes, camera]
   PROJ --> C
@@ -54,10 +56,10 @@ flowchart LR
 One npm package (name to be chosen):
 
 ```bash
-npx <name> init              # install the skills, register the MCP server
-<name> check docs/wiring.md  # parse and validate the wiring document
-<name> render docs/wiring.md --out docs/media/
-<name> mcp                   # MCP server entry point
+npx <name> init                # install the skills, register the MCP server
+<name> check docs/wiring.json  # validate the resolved wiring (schema, parts, pins, stale hash)
+<name> render docs/wiring.json --out docs/media/
+<name> mcp                     # MCP server entry point
 ```
 
 The CLI holds all the logic; the MCP server and the skills call it. A user can automate rendering with the CLI
@@ -103,8 +105,11 @@ A Markdown file written by a human or by Claude, readable as documentation. Only
 | black | Terminals GND   | Session gauge −, Display GND, Strip GND | common ground |
 ```
 
-Parsing is tolerant but deterministic: the same document always gives the same result, and a line the parser
-cannot resolve is reported with its line number instead of being guessed.
+The skill reads the document, not a parser: it accepts any reasonable layout, resolves each pin reference to a
+pin identifier of the part, and asks the user instead of guessing when a reference is ambiguous or unknown,
+citing the line. It writes the result to `wiring.json` next to the document, the only input of the CLI.
+Example: [examples/claudemetre/wiring.json](examples/claudemetre/wiring.json), resolved from
+[wiring.md](examples/claudemetre/wiring.md).
 
 ### Generated project and manual edits
 
@@ -157,8 +162,10 @@ Last update: 2026-11-16. Resume from here.
 2. **Propose the next changes** once the maintainer has reacted to #2 and #4: Presentation in project (texts in
    [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md)), then the Automation API
    (draft texts to write).
-3. **Phase 3, document format**: template from examples/claudemetre/wiring.md, deterministic parser with
-   line-numbered validation messages, pin resolution through `listParts()` pins and aliases.
+3. **Phase 3, document format**: first version done, [schema/wiring.schema.json](schema/wiring.schema.json)
+   and the Claudemètre example resolved into `wiring.json`; examples/claudemetre/wiring.md serves as the
+   template. Remaining: the skill's reading instructions (pin resolution through the part pins and aliases,
+   questions with line numbers) and the CLI `check` (schema, part and pin cross-references, stale hash).
 4. **Phase 4, part converter**: `part inspect` and `part convert` per
    [docs/part-converter-plan.md](docs/part-converter-plan.md), starting from `spike/prepare_parts.py`.
 5. **Phase 5, project builder**: Markdown to `.c3dproj` with clean routing, layout hints, automatic placement
@@ -171,7 +178,8 @@ Last update: 2026-11-16. Resume from here.
    decisions.
 2. **Spike** — done 2026-11-16, see [docs/feasibility-results.md](docs/feasibility-results.md): hosted site
    unusable, local clone works, an automation API (F1) and video settings in the project (F2) are needed upstream.
-3. **Document format** (next) — template, parser, validation messages; tested on the reference project's wiring.
+3. **Document format** (in progress) — Markdown template read by the skill, resolved `wiring.json` and its
+   schema, CLI `check`; tested on the reference project's wiring.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
 5. **Project builder** — Markdown to `.c3dproj` with automatic layout and routing; merge with manual edits.
 6. **Rendering CLI** — `render` with MP4, WebP and poster outputs.

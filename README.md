@@ -22,8 +22,9 @@ all):
 
 - **AI agents do the tedious part**: read the project's specs, schematic or firmware, write a clean wiring
   document, find or convert the 3D models of the parts, map each wire to the right pin.
-- **Rendering stays deterministic**: once the wiring document and the parts are committed, a plain command
-  renders the video, without an LLM, so it can run in a git hook or a CI job.
+- **Rendering stays deterministic**: a skill resolves the free-form wiring document into a `wiring.json`;
+  once that file and the parts are committed, a plain command renders the video, without an LLM, so it can run
+  in a git hook or a CI job.
 - **The project owner stays in control**: documents, 3D models and videos live in their own repository; they
   decide what is published and how rendering is automated.
 
@@ -33,9 +34,10 @@ all):
 flowchart LR
   SRC[Project sources<br/>specs, schematic, firmware] --> A[wiring-plan skill]
   A --> DOC[Wiring document .md]
+  A --> JSON[Resolved wiring.json]
   DOC --> B[wiring-parts skill]
   B --> PARTS[Parts .c3dcomponent]
-  DOC --> C[wiring-video skill / MCP / CLI]
+  JSON --> C[wiring-video skill / MCP / CLI]
   PARTS --> C
   C --> OUT[MP4 + WebP + poster]
 ```
@@ -43,6 +45,8 @@ flowchart LR
 1. **Describe the wiring.** The `wiring-plan` skill reads the project (any format) and writes or completes a
    Markdown wiring document from a template. It reports inconsistencies, for example a GPIO in the docs that
    differs from the firmware, and asks for exact pin names using the pins Circuit Studio knows for each part.
+   It then resolves the document into a `wiring.json` (parts, pin identifiers, wire order, layout hints), the
+   only input of the CLI; see [examples/claudemetre/](examples/claudemetre/).
 
    ```markdown
    ## Parts
@@ -71,9 +75,9 @@ Planned commands (one npm package, name still to be chosen):
 
 ```bash
 npx <name> init                                   # install the skills, register the MCP server
-<name> check docs/wiring.md                       # parse and validate the wiring document
+<name> check docs/wiring.json                     # validate the resolved wiring
 <name> part convert board.step --spec board.yaml  # STEP model to Circuit Studio part
-<name> render docs/wiring.md --out docs/media/    # MP4 + WebP + poster
+<name> render docs/wiring.json --out docs/media/  # MP4 + WebP + poster
 <name> mcp                                        # MCP server for any agent
 ```
 
