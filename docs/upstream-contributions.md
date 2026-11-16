@@ -15,5 +15,18 @@ the new `upstream/main` and switch our tooling from the spike workaround to the 
 | Presentation in project (F2) | — | — | [`feat/presentation-in-project`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project) | Pushed to the fork, not proposed upstream yet; [draft](upstream-drafts/presentation.md) | Write the presentation block from our generator |
 | Automation API (F1) | — | — | [`feat/automation-api`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on model references + presentation) | Pushed to the fork (commit `8ad0d35`), not proposed upstream yet | Replace dev-server module imports with `window.circuitStudio` |
 
+## Arguments for the automation API pull request
+
+What the API saves our users, to state in the PR description (noted 2026-11-16):
+
+- **Catalog without the sources**: `listParts()` gives the built-in parts and their pins from the site itself. Without
+  it, the kit needs a local Circuit Studio checkout or downloads the author's repository, then compiles `src/model.ts`
+  on the user's machine, so it ships esbuild, zod and three as runtime dependencies (`tools/catalog/snapshot.mjs`).
+- **No reading of internals**: today the snapshot collects the `*_COMPONENT` exports of `model.ts` and reads the list
+  of parts the app offers from `store.ts` with a pattern; any refactor upstream breaks it. The API is a stable contract.
+- **No dev server**: driving the app (load a project, render, record) goes through `window.circuitStudio` on the hosted
+  site instead of Vite module imports on a local dev server, so users need neither a clone nor `npm install` of
+  Circuit Studio.
+
 If the maintainer declines a change or asks for another shape, record it here and update the plan
 (PLAN.md decisions) accordingly.

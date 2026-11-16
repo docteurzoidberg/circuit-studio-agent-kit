@@ -31,16 +31,16 @@ document's own pin list.
 6. **Line numbers** are the 1-based lines of the table rows in `wiring.md`.
 7. **Hash**: compute the SHA-256 of `wiring.md` with a command (`sha256sum wiring.md`); never write it from
    memory. Compute it after the last change to the document.
-8. **Write** `wiring.json` next to the document, two-space indent, with
+8. **Write** `.circuitstudio/wiring.json` (in the project root, created if needed), two-space indent, with
    `"$schema"` pointing to the kit's `wiring.schema.json` and `"version": 1`. Field reference: the schema.
 
 ## Check and report
 
-- Validate the file: the CLI `check` when available (schema, part and pin cross-references, stale hash); until
+- Validate the file: the CLI `wiring` when available (schema, part and pin cross-references, stale hash); until
   then, validate it against `schema/wiring.schema.json` and check every pin against its part yourself.
 - Report in a few lines: number of parts and connections, the pins resolved through aliases or the document's
-  explanations, the questions still open, and the next step (`wiring-parts` for missing parts, `wiring-video`
-  to render).
+  explanations, the questions still open, and the next step (`wiring-parts` for missing parts, `wiring-project`
+  to build the Circuit Studio project).
 
 ## Re-resolution
 

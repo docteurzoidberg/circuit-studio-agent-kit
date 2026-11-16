@@ -2,8 +2,8 @@
 
 <!--
 Wiring document of <project>, written with the wiring-plan skill. It is the single input of the next steps:
-wiring-parts prepares the 3D parts listed under "Parts", then the document is resolved into wiring.json and
-rendered into a wiring video. Only the "Parts" and "Connections" tables are required; every other section is
+wiring-parts prepares the 3D parts listed under "Parts", then the document is resolved into wiring.json,
+wiring-project builds the Circuit Studio project and wiring-video renders it. Only the "Parts" and "Connections" tables are required; every other section is
 optional and free. Remove this comment if you like.
 -->
 

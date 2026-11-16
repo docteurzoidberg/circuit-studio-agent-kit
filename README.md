@@ -1,7 +1,7 @@
 # circuit-studio-agent-kit
 
 Agent skills, an MCP server and a CLI that turn an electronics project's wiring documentation into a 3D wiring
-video, using [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio) as the rendering engine.
+video, using [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio) (from Tech Panda) as the rendering engine.
 
 > Status: **feasibility study done, implementation started.** The first skill, `wiring-plan`, works (first
 > version); the others are in progress or planned (see [Skills](#skills)). This repository also holds the plan,
@@ -22,7 +22,7 @@ This kit adds that path, for any electronics project (ESPHome, Arduino, MicroPyt
 all):
 
 - **AI agents do the tedious part**: read the project's specs, schematic or firmware, write a clean wiring
-  document, find or convert the 3D models of the parts, map each wire to the right pin.
+  document, find/convert/build the 3D models of the parts, map each wire to the right pin.
 - **Rendering stays deterministic**: a skill resolves the free-form wiring document into a `wiring.json`;
   once that file and the parts are committed, a plain command renders the video, without an LLM, so it can run
   in a git hook or a CI job.
@@ -38,8 +38,10 @@ flowchart LR
   A --> JSON[Resolved wiring.json]
   DOC --> B[wiring-parts skill]
   B --> PARTS[Parts .c3dcomponent]
-  JSON --> C[wiring-video skill / MCP / CLI]
-  PARTS --> C
+  JSON --> P[wiring-project skill]
+  PARTS --> P
+  P --> PROJ[Circuit Studio project .c3dproj]
+  PROJ --> C[wiring-video skill / MCP / CLI]
   C --> OUT[MP4 + WebP + poster]
 ```
 
@@ -68,23 +70,34 @@ flowchart LR
    colours, measured pin positions, a mesh simplified only when the model is really complex, and a preview to
    check the pins.
 
-3. **Render.** The `wiring-video` skill (or the CLI, or the MCP server) builds the Circuit Studio project, shows
-   preview frames, and renders an MP4 plus a WebP and a poster image for the README. Rendering runs locally in
-   Chrome with a GPU.
+3. **Build the project.** The `wiring-project` skill generates the Circuit Studio project from `wiring.json` and
+   the parts: placement, wire routes, camera and presentation texts. It shows preview images and reviews the
+   project with the owner until they validate it; the owner can also open it in the Circuit Studio editor and
+   move things by hand, and a later regeneration keeps those edits.
 
-4. **Automate, if wanted.** The CLI works without Claude, so the owner can re-render on push, in a hook or in CI.
+4. **Render.** The `wiring-video` skill (or the CLI, or the MCP server) renders the project into an MP4 plus a
+   WebP and a poster image for the README. Rendering runs locally in Chrome with a GPU.
 
-Planned commands (one npm package, name still to be chosen):
+5. **Automate, if wanted.** The CLI works without Claude, so the owner can re-render on push, in a hook or in CI.
 
-```bash
-npx <name> init                                   # install the skills (project or global), register the MCP server
-<name> check docs/wiring.json                     # validate the resolved wiring
-<name> part inspect board.step                   # what the model holds: tree, colours, contacts
-<name> part convert board.yaml                    # STEP model to Circuit Studio part, from its spec
-<name> render docs/wiring.json --out docs/media/  # MP4 + WebP + poster
-<name> mcp                                        # MCP server for any agent
-npx <name> uninstall                              # remove what init installed, keep the project's files
-```
+Commands (one npm package, name still to be chosen), kept up to date as the project moves on:
+
+| Command | Step | What it does | State |
+|---|---|---|---|
+| `npx <name> init` | Setup | Installs the kit for the project or globally (it asks): skills, MCP server registration | Planned |
+| `npx <name> uninstall` | Setup | Removes exactly what `init` installed; the project's files stay | Planned |
+| `npx <name> mcp` | Setup | The MCP server, one tool per command, for any agent; registered by `init`, the agent starts and stops it itself | Planned |
+| `npx <name> check` | All | Where the project stands with the kit: steps done, step in progress, what to do next | Planned |
+| `npx <name> wiring` | `wiring-plan` | Checks `.circuitstudio/wiring.json` against its document (hash), the parts and their pins | Planned |
+| `npx <name> part catalog` | `wiring-parts` | Snapshot of the Circuit Studio catalog into `.circuitstudio/catalog.json` | Written as a script ([tools/catalog/](tools/catalog/)), not yet a `part` command |
+| `npx <name> part inspect <model.step>` | `wiring-parts` | What a STEP model holds: tree, colours, sizes, contact rows, complexity | Written ([tools/parts/](tools/parts/)) |
+| `npx <name> part convert <part.yaml>` | `wiring-parts` | STEP model to Circuit Studio part (`.c3dcomponent` and a preview), next to the spec | Written ([tools/parts/](tools/parts/)) |
+| `npx <name> build` | `wiring-project` | Generates or updates `.circuitstudio/project.c3dproj`, keeping manual edits | Planned |
+| `npx <name> render` | `wiring-video` | Renders the project: MP4, WebP and poster into `.circuitstudio/media/` (`--out` to choose) | Planned |
+
+The commands follow the skills, in the order a user meets them; the skills call them, and they also work
+without Claude (hooks, CI). Every command works on the project's `.circuitstudio/` folder, found from the current
+folder upwards (as git finds `.git/`), and needs no file name, except `part inspect` and `part convert`.
 
 ## Skills
 
@@ -95,10 +108,11 @@ The skills are used in this order; each starts from what the previous one produc
 | `wiring-plan` | Writes the wiring document from the project's sources, or by interviewing the owner, and reviews it with them until they validate it | **Implemented** (first version, being refined): [user guide](docs/user-guide/skills/wiring-plan.md), [skills/wiring-plan/](skills/wiring-plan/) |
 | `wiring-parts` | Gives every part of the document a 3D model Circuit Studio can show, with its pins at the right places | **In progress**: design and [user guide draft](docs/user-guide/skills/wiring-parts.md); the `part inspect` and `part convert` commands are written, the skill comes next |
 | Resolution into `wiring.json` | Part of `wiring-plan`, run after the parts: resolves the document into the file the CLI renders from | **Planned**: the [schema](schema/wiring.schema.json) and an [example](examples/claudemetre/wiring.json) exist; the instructions are a [draft](skills/wiring-plan/resolve.md) |
-| `wiring-video` | Builds the Circuit Studio project, shows preview frames, renders the video, and helps the owner set up their own automation | **Planned** |
+| `wiring-project` | Generates the Circuit Studio project (placement, wire routes, camera, presentation texts) and reviews it with the owner until they validate it, keeping their manual edits from the editor | **Planned** |
+| `wiring-video` | Renders the validated project into the video, WebP and poster, and helps the owner set up their own automation | **Planned** |
 
-The command line and the MCP server hold the logic the skills call (commands above): `part inspect` and
-`part convert` are written (Python prototype in `tools/c3dparts/`); `check`, `render`, `init`, `uninstall` and the MCP server (`mcp`) are planned.
+The command line and the MCP server hold the logic the skills call (commands above). The Node part tools have a
+first Python version in `tools/c3dparts/`, kept as the reference their tests compare with.
 
 ## What the feasibility study showed
 
