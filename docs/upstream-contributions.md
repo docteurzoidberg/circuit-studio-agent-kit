@@ -13,7 +13,7 @@ the new `upstream/main` and switch our tooling from the spike workaround to the 
 | Base-path assets | [#1](https://github.com/arslansadiq87/circuit-studio/issues/1) | [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) | `fix/base-path-assets` | Open (2026-11-16) | Hosted site usable for previews; update access modes in upstream-study.md |
 | Model references (F4) | [#3](https://github.com/arslansadiq87/circuit-studio/issues/3) | [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) | `fix/model-reference-from-catalog` | Open (2026-11-16) | Drop the model-geometry restore from the spike scripts |
 | Presentation in project (F2) | — | — | [`feat/presentation-in-project`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project) | Pushed to the fork, not proposed upstream yet; [draft](upstream-drafts/presentation.md) | Write the presentation block from our generator |
-| Automation API (F1) | — | — | `feat/automation-api` (local, built on model references + presentation) | Implemented and tested locally (commit `8ad0d35`), not pushed, not proposed yet | Replace dev-server module imports with `window.circuitStudio` |
+| Automation API (F1) | — | — | [`feat/automation-api`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on model references + presentation) | Pushed to the fork (commit `8ad0d35`), not proposed upstream yet | Replace dev-server module imports with `window.circuitStudio` |
 
 If the maintainer declines a change or asks for another shape, record it here and update the plan
 (PLAN.md decisions) accordingly.
