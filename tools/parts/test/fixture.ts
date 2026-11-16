@@ -27,6 +27,39 @@ function cylinder(oc: OC, radius: number, height: number, [x, y, z]: number[]): 
     .Shape();
 }
 
+/** Write an XCAF document as STEP text. */
+function stepText(oc: OC, doc: InstanceType<OC['Handle_TDocStd_Document_2']>): Buffer {
+  const writer = new oc.STEPCAFControl_Writer_1();
+  writer.SetColorMode(true);
+  writer.SetNameMode(true);
+  const file = '/fixture.step';
+  if (!writer.Perform_2(doc, file, new oc.Message_ProgressRange_1())) throw new Error('STEP write failed');
+  const step = Buffer.from(oc.FS.readFile(file));
+  oc.FS.unlink(file);
+  return step;
+}
+
+/**
+ * A STEP assembly holding one shape placed twice (two instances of the same 5 x 5 x 10 post, at x = -20 and x = 20,
+ * standing on z = 0): 45 x 5 x 10 mm in all. Written by the tests, not committed.
+ */
+export async function instancedStep(): Promise<Buffer> {
+  const oc = await occt();
+  const doc = new oc.Handle_TDocStd_Document_2(new oc.TDocStd_Document(new oc.TCollection_ExtendedString_1()));
+  const shapes = oc.XCAFDoc_DocumentTool.ShapeTool(doc.get().Main()).get();
+  const root = shapes.NewShape();
+  oc.TDataStd_Name.Set_1(root, new oc.TCollection_ExtendedString_2('Posts', true));
+  const post = shapes.AddShape(box(oc, [5, 5, 10], [0, 0, 0]), false, false);
+  oc.TDataStd_Name.Set_1(post, new oc.TCollection_ExtendedString_2('Post', true));
+  for (const x of [-20, 20]) {
+    const move = new oc.gp_Trsf_1();
+    move.SetTranslation_1(new oc.gp_Vec_4(x, 0, 0));
+    shapes.AddComponent_1(root, post, new oc.TopLoc_Location_2(move));
+  }
+  shapes.UpdateAssemblies();
+  return stepText(oc, doc);
+}
+
 /** The fixture as STEP text. */
 export async function fixtureStep(): Promise<Buffer> {
   const oc = await occt();
@@ -58,15 +91,7 @@ export async function fixtureStep(): Promise<Buffer> {
   SCREW_X.forEach((x, i) => part(terminal, `Screw ${i + 1}`, cylinder(oc, 1.25, 1, [x, -5, 5.6]), STEEL));
   part(root, 'Tiny', box(oc, [0.3, 0.3, 0.3], [12, 8, 1.6]), BLACK);
   shapes.UpdateAssemblies();
-
-  const writer = new oc.STEPCAFControl_Writer_1();
-  writer.SetColorMode(true);
-  writer.SetNameMode(true);
-  const file = '/fixture.step';
-  if (!writer.Perform_2(doc, file, new oc.Message_ProgressRange_1())) throw new Error('STEP write failed');
-  const step = Buffer.from(oc.FS.readFile(file));
-  oc.FS.unlink(file);
-  return step;
+  return stepText(oc, doc);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

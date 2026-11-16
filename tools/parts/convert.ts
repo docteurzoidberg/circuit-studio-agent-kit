@@ -119,11 +119,21 @@ function bodiesDocument(oc: OC, rootName: string, bodies: {name: string; colour:
     oc.TDataStd_Name.Set_1(label, new oc.TCollection_ExtendedString_2(text, true));
   const root = shapeTool.NewShape();
   name(root, rootName);
+  // A STEP file often places one shape several times (instances: the same TShape at several locations). Each
+  // shape goes in once without its location, and each body is a component at its own location; adding the placed
+  // shape instead made XCAF reuse the first instance's entry, so the other instances landed on the first one.
+  const shapes: {bare: Shape; colour: string; label: ReturnType<typeof shapeTool.NewShape>}[] = [];
   for (const body of bodies) {
-    const label = shapeTool.AddShape(body.shape, false, false);
-    name(label, body.name);
-    colourTool.SetColor_2(label, quantityColour(oc, body.colour), enumValue(oc.XCAFDoc_ColorType.XCAFDoc_ColorSurf));
-    shapeTool.AddComponent_1(root, label, new oc.TopLoc_Location_1());
+    let entry = shapes.find(s => s.colour === body.colour && s.bare.IsPartner(body.shape));
+    if (!entry) {
+      const bare = body.shape.Located(new oc.TopLoc_Location_1(), false);
+      const label = shapeTool.AddShape(bare, false, false);
+      name(label, body.name);
+      colourTool.SetColor_2(label, quantityColour(oc, body.colour), enumValue(oc.XCAFDoc_ColorType.XCAFDoc_ColorSurf));
+      entry = {bare, colour: body.colour, label};
+      shapes.push(entry);
+    }
+    shapeTool.AddComponent_1(root, entry.label, body.shape.Location_1());
   }
   shapeTool.UpdateAssemblies();
   return doc;

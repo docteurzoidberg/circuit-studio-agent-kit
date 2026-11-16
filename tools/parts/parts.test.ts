@@ -13,6 +13,7 @@ import type {Part} from './convert.ts';
 import {inspect} from './inspect.ts';
 import {loadSpec, SpecError} from './spec.ts';
 import {readStep, StepReadError} from './step.ts';
+import {instancedStep} from './test/fixture.ts';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'test', 'fixtures');
 const reference = (name: string): unknown => JSON.parse(readFileSync(join(FIXTURES, `test-board.${name}.reference.json`), 'utf8'));
@@ -66,6 +67,22 @@ describe('convert', () => {
   test('gives the expected outputs on the fixture', () => {
     const {asset, ...part} = component.part;
     assertClose(part, reference('convert'));
+  });
+});
+
+describe('convert, instanced shapes', () => {
+  let folder: string;
+  before(() => { folder = mkdtempSync(join(tmpdir(), 'parts-instances-')); });
+  after(() => rmSync(folder, {recursive: true, force: true}));
+
+  test('places every instance of a shape at its own location', async () => {
+    writeFileSync(join(folder, 'posts.step'), await instancedStep());
+    writeFileSync(join(folder, 'part.yaml'), 'id: posts\nname: Posts\nstep: posts.step\n'
+      + 'pins: [{id: A, at: [-20, 0, 10], exit: [0, 0, 1]}, {id: B, at: [20, 0, 10], exit: [0, 0, 1]}]\n');
+    assert.equal(await main(['part', 'convert', join(folder, 'part.yaml'), '--no-preview'], {out: () => {}}), 0);
+    const {part} = JSON.parse(readFileSync(join(folder, 'posts.c3dcomponent'), 'utf8')) as {part: Part};
+    // Both posts, 40 mm apart: before the fix, the second instance landed on the first (5 x 5 x 10).
+    assertClose(part.dimensions, [45, 5, 10], 0.01);
   });
 });
 
