@@ -6,12 +6,28 @@ video, using [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio
 > Status: **feasibility study done, implementation not started.** This repository holds the plan, the study of
 > Circuit Studio, the test scripts, and the changes we would like to propose upstream.
 
-## The idea
+## Why
 
-A maker documents how a project is wired. An agent (Claude Code skills or any MCP client) reads that
-documentation, prepares the missing 3D parts, and renders a short video showing every wire being connected,
-ready to embed in the project's README or docs. The user decides how to automate it in their own workflow
-(git hook, CI, pre-push checklist).
+Wiring is the part of a hardware project that is hardest to document well. It usually ends up as a table of
+"GPIO4 → gauge +" lines, a schematic, or a few photos: correct, but hard to follow for someone who has to
+reproduce the build, and quickly out of date when the wiring changes.
+
+[Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio) solves the visual part: it places real 3D
+models of the parts, routes the wires and generates a video that connects them one by one, with an automatic
+camera. What is missing is the path from a project's existing documentation to that video, without rebuilding
+the scene by hand in the editor each time the wiring changes.
+
+This kit adds that path, for any electronics project (ESPHome, Arduino, MicroPython, KiCad or no schematic at
+all):
+
+- **AI agents do the tedious part**: read the project's specs, schematic or firmware, write a clean wiring
+  document, find or convert the 3D models of the parts, map each wire to the right pin.
+- **Rendering stays deterministic**: once the wiring document and the parts are committed, a plain command
+  renders the video, without an LLM, so it can run in a git hook or a CI job.
+- **The project owner stays in control**: documents, 3D models and videos live in their own repository; they
+  decide what is published and how rendering is automated.
+
+## How it will work
 
 ```mermaid
 flowchart LR
@@ -24,12 +40,54 @@ flowchart LR
   C --> OUT[MP4 + WebP + poster]
 ```
 
-- **Wiring document**: plain Markdown with two required tables (parts, connections), parsed deterministically,
-  so renders can run without an LLM.
-- **Parts**: a converter turns STEP models into Circuit Studio parts (simplification, colours, measured
-  contacts).
-- **Rendering**: Circuit Studio's own Auto Video (automatic camera, H.264 MP4 in the browser), driven locally in
-  a real Chrome with a GPU.
+1. **Describe the wiring.** The `wiring-plan` skill reads the project (any format) and writes or completes a
+   Markdown wiring document from a template. It reports inconsistencies, for example a GPIO in the docs that
+   differs from the firmware, and asks for exact pin names using the pins Circuit Studio knows for each part.
+
+   ```markdown
+   ## Parts
+   | Name          | Part              | Note                  |
+   |---------------|-------------------|-----------------------|
+   | Board         | mrd076a-esp32-s3  | screw-terminal adapter |
+   | Session gauge | so-45             |                       |
+
+   ## Connections
+   | Wire | From         | To              | Note |
+   |------|--------------|-----------------|------|
+   | blue | Board GPIO4  | Session gauge + | PWM  |
+   ```
+
+2. **Prepare the parts.** For each part missing from the Circuit Studio catalog, the `wiring-parts` skill uses
+   the project's own STEP model, or helps find or create one, then converts it into a Circuit Studio part:
+   simplified mesh, colours, measured pin positions, and a preview to check the pins.
+
+3. **Render.** The `wiring-video` skill (or the CLI, or the MCP server) builds the Circuit Studio project, shows
+   preview frames, and renders an MP4 plus a WebP and a poster image for the README. Rendering runs locally in
+   Chrome with a GPU.
+
+4. **Automate, if wanted.** The CLI works without Claude, so the owner can re-render on push, in a hook or in CI.
+
+Planned commands (one npm package, name still to be chosen):
+
+```bash
+npx <name> init                                   # install the skills, register the MCP server
+<name> check docs/wiring.md                       # parse and validate the wiring document
+<name> part convert board.step --spec board.yaml  # STEP model to Circuit Studio part
+<name> render docs/wiring.md --out docs/media/    # MP4 + WebP + poster
+<name> mcp                                        # MCP server for any agent
+```
+
+## What the feasibility study showed
+
+Tested on a real project, the [Claudemètre](https://github.com/docteurzoidberg/claudemetre) desk gauge
+(details in [docs/feasibility-results.md](docs/feasibility-results.md)):
+
+- A Markdown wiring document with 9 parts and 17 wires, parsed without an LLM, plus parts converted from the
+  project's STEP models (terminal adapter with 44 measured screw contacts, panel voltmeters, display, power
+  socket, fuse holder), gave a correct 59-second 1080p wiring video, rendered by Circuit Studio.
+- The public hosted site cannot be driven yet (bundled models fail to load); a local clone works.
+- Mesh weight drives render time: simplified models cut it by 45 % (363 s to 202 s for the 59 s video).
+- Durable automation needs a few small changes in Circuit Studio, proposed upstream below.
 
 ## What we would like to propose to Circuit Studio
 

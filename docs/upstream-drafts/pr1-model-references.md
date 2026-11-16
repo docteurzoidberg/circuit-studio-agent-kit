@@ -24,10 +24,33 @@ Expected: built-in parts resolve their model from `modelId`, as when they are ad
 A fix is proposed in the linked pull request: one registry of built-in parts keyed by `modelId`, used as a
 fallback when a saved model part carries no reference of its own.
 
-Context: this is the second of the small changes listed in #1, which explains the project behind them
-([circuit-studio-agent-kit](https://github.com/docteurzoidberg/circuit-studio-agent-kit)). Generated
-projects would rely on this to stay small: they can reference built-in parts by `modelId` without copying
-their geometry.
+### Context: why I am looking at this
+
+This is the second of the small changes announced in #1. As a reminder, I am building
+[circuit-studio-agent-kit](https://github.com/docteurzoidberg/circuit-studio-agent-kit), an open-source (MIT)
+set of AI-agent skills, an MCP server and a CLI around Circuit Studio: a maker keeps a plain Markdown wiring
+document in their project, the agent prepares the missing 3D parts, and Circuit Studio renders the wiring video
+for the project's README. Circuit Studio stays the editor and the renderer; the kit only feeds it projects and
+parts.
+
+Why this one matters for the kit, and I think beyond it:
+
+- **Generated projects reference built-in parts by `modelId`**, as the upstream fixture already does, instead
+  of copying their model URLs, centre and orientation. Files stay small and readable, and they keep working if
+  a bundled model is renamed, re-exported or gets new LODs.
+- **Hand-written and older project files** get the same benefit: today a missing reference only shows up when the
+  video is exported, after the user has set up the whole video.
+- **It prepares the automation API** proposed in the
+  [plan](https://github.com/docteurzoidberg/circuit-studio-agent-kit/blob/main/docs/tool-changes-plan.md): its
+  `listParts()` (the parts and pins an agent can use) would read this same registry, so the parts bin, saved
+  projects and scripts share one source of truth.
+
+During the [feasibility study](https://github.com/docteurzoidberg/circuit-studio-agent-kit/blob/main/docs/feasibility-results.md)
+I had to work around this by copying the built-in geometry into every generated project; this change removes
+the need for that.
+
+The change is independent of #2 and kept to the minimum (one new module, three call sites). If you would rather
+fix it differently, for example by migrating saved files only, I am happy to adapt.
 
 ## Pull request
 
