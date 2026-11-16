@@ -39,6 +39,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D14 | `wiring-parts` (2026-11-16): at launch it takes a **snapshot of the Circuit Studio catalog** (from the automation API `listParts()` once upstream has it; until then from Circuit Studio's sources: a local checkout when present, offline, else the author's repository, downloaded only after asking (D15); command `part catalog`, `tools/catalog/`) (built-in parts and their pins) into `.circuitstudio/catalog.json`, compares it with the parts of the validated wiring document and the model files found in the project, lists the missing parts, then proposes how to get each (online search, modelling from the technical drawings available, stand-in). Prepared parts go to **`.circuitstudio/parts/<id>/`** (`part.yaml`, `.c3dcomponent`, preview). Built in this order: the `part inspect` / `part convert` command line from the spike prototype first, then the skill on top; the skill's first version covers model files already in the project and stand-ins, online search and modelling come next. User guide: [docs/user-guide/skills/wiring-parts.md](docs/user-guide/skills/wiring-parts.md). |
 | D15 | **No external call without asking** (2026-11-16): every skill asks the user before any network access (fetching the Circuit Studio catalog, an online search for a model or a datasheet, a download), saying what it will fetch and from where, and offers to go on without it. |
 | D16 | **Node is the only runtime a user needs** (2026-11-16): `npx`, the MCP server, driving the browser for rendering and reading the Circuit Studio catalog all need Node anyway. The STEP converter is ported from Python (CadQuery) to Node with OpenCascade compiled to WebAssembly: `opencascade.js` 2.0.0-beta.b5ff984, pinned (the only build with the STEP colour/name reader and the glTF writer; `replicad-opencascadejs` lacks both). Trial on the Claudemètre's MRD076A: same solids, faces and names as CadQuery, 61 s, 1.7 GB peak, a 64 MB package instead of a 1.8 GB Python environment ([docs/part-converter-plan.md](docs/part-converter-plan.md)). The Python `tools/c3dparts/` stays as the reference the Node outputs are tested against; it is not shipped. Supersedes the engine part of D12. |
+| D18 | **`wiring-parts` writes its decisions into the document** (2026-11-16): each part's choice goes back into `wiring.md` (the *Part* column: catalog `modelId`, prepared part id or `stand-in W x H x T`; a stand-in's pins; pin names a catalog part cannot answer to; a note), shown to the user and written only with their agreement, so the document stays the single source of truth. **Stand-ins have no file**: they stay declared in the document, as `wiring.json` already allows, and the project builder draws the box. Prepared parts name their pins as the document does (labels, aliases). |
 | D17 | **The kit is written in TypeScript** (2026-11-16), like Circuit Studio, so agents and contributors read one language across both projects. Node 22 runs the `.ts` files directly (type stripping, erasable syntax only, imports ending in `.ts`); `npm run typecheck` checks them with `tsc`; the published package will be a built bundle. |
 
 ## Architecture
@@ -201,8 +202,14 @@ Last update: 2026-11-16. Resume from here.
    CadQuery; on the Claudemètre's MRD076A it matches the spike within 0.007 mm and flags complex models for
    simplification), then ported to Node in `tools/parts/` (D16), in TypeScript (D17), which gives the same outputs; the catalog
    snapshot — done in `tools/catalog/`; the `part` command (`catalog`, `inspect`, `convert`, entry point
-   `tools/cli.mjs`) — done; next the skill (model files in the project and stand-ins), tested by a fresh agent on the
-   Claudemètre copy; then online search and modelling.
+   `tools/cli.ts`) — done; the skill (catalog parts, model files in the project, stand-ins; D18) — first version
+   in [skills/wiring-parts/](skills/wiring-parts/), tested by a fresh agent on the Claudemètre copy on 2026-11-16
+   (5 parts prepared and validated, 2 stand-ins kept) and corrected after it; the converter fixed so its parts
+   load in Circuit Studio (`modelAssetId`, dimensions measured on the GLB). Tool improvements found by the test,
+   for later: `inspect` does not find the tips of right-angle header pins; the preview draws hidden geometry
+   (studs seen through a body) and overlaps pin labels in the front view; `mergeByColour` drops the reuse of
+   identical meshes and can make the file larger; a check that imports a part into Circuit Studio (automation
+   API: an `importPart` call). Then online search and modelling.
 5. **Phase 5, `wiring-project`**: the CLI `build` (`wiring.json` and parts to `.c3dproj`, clean routing, layout
    hints, automatic placement that retries blocked routes, merge of manual edits), then the skill and its review
    loop, tested by a fresh agent on the Claudemètre copy.
