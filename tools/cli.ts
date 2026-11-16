@@ -7,6 +7,8 @@ import {parseArgs} from 'node:util';
 import {catalog, describe, type CatalogOptions} from './catalog/catalog.ts';
 import {convertCommand, inspectCommand, type PartOptions} from './parts/commands.ts';
 import {projectRoot} from './project.ts';
+import {checkWiring, formatReport} from './wiring/check.ts';
+import {formatPins, PartLibrary} from './wiring/pins.ts';
 
 const USAGE = `usage: circuit-studio-agent-kit <command>
 
@@ -17,16 +19,23 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
       what a STEP model holds: tree, colours, sizes, contact rows, complexity
   part convert <part.yaml> [--out <file.c3dcomponent>] [--preview <file.png> | --no-preview] [--json]
       STEP model to Circuit Studio part, from its spec; writes next to the spec by default
+  part pins <part id>... [--json]
+      pins of prepared parts (.circuitstudio/parts/) or built-in parts (.circuitstudio/catalog.json),
+      with the names a wiring document may use for them
+  wiring [--wires] [--json]
+      checks .circuitstudio/wiring.json: schema, parts and pins, source document unchanged;
+      exit code 1 when there are problems; --wires lists every wire as written and as resolved
 
-  planned: init, uninstall, mcp, check, wiring, build, render`;
+  planned: init, uninstall, mcp, check, build, render`;
 
 const OPTIONS = {
   json: {type: 'boolean'}, out: {type: 'string'}, preview: {type: 'string'}, 'no-preview': {type: 'boolean'},
   from: {type: 'string'}, download: {type: 'boolean'}, ref: {type: 'string'}, force: {type: 'boolean'},
+  wires: {type: 'boolean'},
   help: {type: 'boolean', short: 'h'},
 } as const;
 
-type Options = CatalogOptions & PartOptions & {help?: boolean};
+type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean};
 
 /** Where the command line runs and writes (the tests give their own). */
 export interface Io {
@@ -45,6 +54,18 @@ async function part([sub, file, ...rest]: string[], options: Options, cwd: strin
   }
   if (sub === 'inspect' && file && !rest.length) return inspectCommand(file, options);
   if (sub === 'convert' && file && !rest.length) return convertCommand(file, options);
+  if (sub === 'pins' && file) {
+    const library = new PartLibrary(projectRoot(cwd));
+    const ids = [file, ...rest];
+    const missing = ids.filter(id => !library.find(id));
+    if (missing.length) {
+      throw new Error(`not a prepared part (.circuitstudio/parts/<id>/<id>.c3dcomponent) nor a part of the catalog `
+        + `snapshot (.circuitstudio/catalog.json${library.catalogSnapshot() ? '' : ', missing: run part catalog'}): `
+        + missing.join(', '));
+    }
+    const parts = ids.map(id => library.find(id)!);
+    return options.json ? JSON.stringify(parts, null, 1) : formatPins(parts);
+  }
   throw new UsageError(`unknown or incomplete part command: ${[sub, file, ...rest].filter(Boolean).join(' ')}`);
 }
 
@@ -64,6 +85,12 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
     return options.help ? 0 : 2;
   }
   try {
+    if (command === 'wiring') {
+      if (args.length) throw new UsageError('wiring takes no argument');
+      const report = checkWiring(projectRoot(cwd), {wires: options.wires});
+      out(options.json ? JSON.stringify(report, null, 1) : formatReport(report));
+      return report.problems.length ? 1 : 0;
+    }
     if (command !== 'part') throw new UsageError(`unknown command: ${command}`);
     out(await part(args, options, cwd));
     return 0;
