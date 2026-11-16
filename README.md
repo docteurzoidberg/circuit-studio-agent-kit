@@ -43,7 +43,8 @@ Small, focused pull requests, each discussed in an issue first. Details in
 | 2 | Optional presentation block in the project: video settings, shot overrides, saved camera scenes |
 | 3 | A documented automation API (`window.circuitStudio`) available in production builds |
 
-Bugs met during the study: [docs/upstream-bugs.md](docs/upstream-bugs.md).
+Bugs met during the study: [docs/upstream-bugs.md](docs/upstream-bugs.md). Status of what has been proposed:
+[docs/upstream-contributions.md](docs/upstream-contributions.md).
 
 ## Reference project
 
@@ -63,12 +64,21 @@ wiring, written in the proposed Markdown format, is in
 | [docs/tool-changes-plan.md](docs/tool-changes-plan.md) | Planned upstream pull requests |
 | [docs/part-converter-plan.md](docs/part-converter-plan.md) | STEP to `.c3dcomponent` converter |
 | [docs/upstream-bugs.md](docs/upstream-bugs.md) | Bugs found in Circuit Studio |
+| [docs/upstream-contributions.md](docs/upstream-contributions.md) | Upstream issues and pull requests, and their status |
 
 ## Spike scripts
 
 `spike/` holds the feasibility test scripts (not the final tooling): a Markdown wiring parser and project
 builder run in the Circuit Studio page, STEP inspection, part preparation and simplification with CadQuery,
 and a small CORS file server. They expect a local clone of Circuit Studio running on the Vite dev server.
+
+## Credits
+
+This kit exists because of [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio), created by
+**Arslan Sadiq** ([@arslansadiq87](https://github.com/arslansadiq87), [TechPanda Labs](https://techpandalabs.com/)):
+a free, open-source 3D circuit design and visualization tool for makers, students and electronics enthusiasts,
+released under the MIT license. Every 3D view and wiring video produced with this kit is rendered by Circuit
+Studio; its editor, part catalog, CAD calibration and Auto Video generator do the actual work. Thank you!
 
 ## License
 
