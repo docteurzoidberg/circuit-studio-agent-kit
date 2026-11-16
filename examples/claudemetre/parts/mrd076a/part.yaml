@@ -1,6 +1,7 @@
 # Part spec of the Claudemètre's board: an MRD076A screw-terminal adapter carrying an ESP32-S3-DevKitC-1.
 # Written by hand on 2026-11-16 while building the part converter; the kind of spec the wiring-parts skill writes
-# with the user. Checked with `part convert`: 44 pins, 73.6 x 84.7 x 20.46 mm, same output in Python and TypeScript.
+# with the user. Checked with `part convert`: 44 pins, 73.6 x 84.7 x 20.46 mm, same output in Python and TypeScript
+# (2026-11-16, before the Python version was removed).
 #
 # In the Claudemètre project this file would be .circuitstudio/parts/mrd076a-esp32-s3/part.yaml, and `step` is
 # relative to it. The STEP file comes from a third party and is not in this repository.

@@ -10,6 +10,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["tools"],
-  "exclude": ["tools/c3dparts"]
+  "include": ["tools"]
 }

@@ -1,4 +1,4 @@
-// Read a STEP file with its assembly tree, names and colours (OpenCascade XCAF), like tools/c3dparts/step_io.py.
+// Read a STEP file with its assembly tree, names and colours (OpenCascade XCAF).
 import {existsSync, readFileSync} from 'node:fs';
 import type {Handle_TDocStd_Document, TDF_Label, TopLoc_Location} from 'opencascade.js/dist/opencascade.full.js';
 import {colourHex, enumValue, extendedText, occt, uniqueSubShapes, type Box, type OC, type Shape} from './occt.ts';

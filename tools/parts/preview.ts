@@ -1,5 +1,5 @@
 // Preview PNG of a converted part: top and front orthographic views in the part frame, pins labelled.
-// Port of tools/c3dparts/preview.py: drawn as SVG from a coarse tessellation (painter's order, flat shading) and
+// Drawn as SVG from a coarse tessellation (painter's order, flat shading) and
 // rasterised with resvg, without a GPU. Enough to check pin positions and orientation; the faithful render comes
 // from Circuit Studio itself.
 import {writeFileSync} from 'node:fs';

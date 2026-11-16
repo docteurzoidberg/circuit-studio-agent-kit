@@ -1,5 +1,5 @@
 // `part inspect`: the facts a skill needs to write a part spec — tree, colours, sizes and candidate contacts.
-// Port of tools/c3dparts/inspect_step.py. Nothing is guessed: contacts are candidates (cylinders and thin posts),
+// Nothing is guessed: contacts are candidates (cylinders and thin posts),
 // grouped into regular rows when they line up, so the skill can propose pin positions and the user confirm them.
 import {basename} from 'node:path';
 import {boundingBox, solidBox, unionBox, uniqueSubShapes, volume, type Box, type OC} from './occt.ts';

@@ -112,8 +112,8 @@ The skills are used in this order; each starts from what the previous one produc
 | `wiring-video` | Renders the validated project into the video, WebP and poster, and helps the owner set up their own automation | **Planned** |
 
 The command line and the MCP server hold the logic the skills call (commands above). They are written in TypeScript
-(D17); the part tools have a first Python version in `tools/c3dparts/`, kept as the reference their tests compare
-with.
+(D17); the part tools were first written in Python (removed, D19), and their tests still check the outputs that
+version gave.
 
 ## What the feasibility study showed
 

@@ -1,4 +1,4 @@
-// `part inspect` and `part convert` (port of `python -m c3dparts`), called by the kit's command line (tools/cli.ts).
+// `part inspect` and `part convert` called by the kit's command line (tools/cli.ts).
 // `convert` writes, by default next to the spec, `<id>.c3dcomponent` and `<id>.png`.
 import {dirname, join} from 'node:path';
 import {convert, writeComponent} from './convert.ts';

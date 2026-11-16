@@ -1,7 +1,7 @@
 # Part converter — plan
 
-Status: plan, 2026-11-16; first implementation in `tools/c3dparts/` (Python + CadQuery: `python -m c3dparts
-inspect|convert`, tests in `tools/c3dparts/tests/`). Part of our package (PLAN.md, D11), not of Circuit Studio. Turns a STEP model into a
+Status: implemented in `tools/parts/` (TypeScript, OpenCascade in WebAssembly), 2026-11-16. First implemented in
+Python with CadQuery (`tools/c3dparts/`), removed once the port gave the same outputs (PLAN.md, D19). Part of our package (PLAN.md, D11), not of Circuit Studio. Turns a STEP model into a
 Circuit Studio part (`.c3dcomponent`) in one deterministic pass. Prototype: `spike/prepare_parts.py`,
 `spike/simplify_steps.py`, `spike/inspect_step.py`.
 
@@ -74,7 +74,7 @@ flowchart LR
 ## STEP engine
 
 Decision (PLAN.md, D16, superseding D12): **Node with OpenCascade compiled to WebAssembly**, `opencascade.js`
-2.0.0-beta.b5ff984 (pinned). The Python + CadQuery implementation in `tools/c3dparts/` (first, proven) stays as the
+2.0.0-beta.b5ff984 (pinned). The Python + CadQuery implementation in `tools/c3dparts/` (first, proven) stayed as the
 reference: the Node converter is tested against its outputs on the same STEP files.
 
 Trial (2026-11-16, Node 22, WSL), reading with colours and names, scanning faces for cylinders, meshing and writing a

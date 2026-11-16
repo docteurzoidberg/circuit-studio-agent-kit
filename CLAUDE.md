@@ -13,7 +13,6 @@ next steps).
 | `tools/cli.ts` | The kit's command line (`part catalog`, `part inspect`, `part convert` so far) |
 | `tools/catalog/` | Snapshot of the Circuit Studio catalog into the user's `.circuitstudio/catalog.json` |
 | `tools/parts/` | STEP inspection and conversion into Circuit Studio parts (OpenCascade in WebAssembly) |
-| `tools/c3dparts/` | First Python version of the part tools: test reference only, not shipped (D16) |
 | `schema/`, `examples/` | `wiring.json` schema; the Claudemètre showcase (`wiring.md`, `wiring.json`) |
 | `docs/` | Study, converter plan, upstream tracking, user guides of the skills (`docs/user-guide/skills/`) |
 
@@ -38,8 +37,8 @@ node tools/cli.ts part inspect tools/parts/test/fixtures/test-board.step
 - The kit never goes on the network without the user's consent (D15): `part catalog` downloads only with
   `--download`, which the skill passes after asking.
 - Commands follow the skills; all but `part inspect` and `part convert` find their files in `.circuitstudio/`.
-- Part tools must keep giving the Python reference outputs: `tools/parts/test/fixtures/*.reference.json`, made by
-  `tools/c3dparts` from the fixture STEP. Regenerate them only on purpose.
+- Part tools must keep giving the expected outputs in `tools/parts/test/fixtures/*.reference.json` (fixture STEP
+  written by `tools/parts/test/fixture.ts`). Regenerate them only on purpose, when an output changes by design (D19).
 - Keep the State columns of the README (skills, commands, upstream contributions) and
   [docs/upstream-contributions.md](docs/upstream-contributions.md) current; at the start of a session, check the
   upstream issues and pull requests listed there.

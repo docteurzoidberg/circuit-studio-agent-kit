@@ -1,5 +1,4 @@
 // Part spec (`part.yaml`): everything `convert` needs, written by the wiring-parts skill with the user.
-// Port of tools/c3dparts/spec.py.
 //
 //   id: so-45                          # kebab-case, unique in the project
 //   name: SO-45 panel voltmeter

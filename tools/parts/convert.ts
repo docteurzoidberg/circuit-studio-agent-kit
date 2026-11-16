@@ -1,5 +1,5 @@
 // `part convert`: STEP + part spec → Circuit Studio part (.c3dcomponent), deterministic, nothing guessed.
-// Port of tools/c3dparts/convert.py.
+// First written in Python with CadQuery (tools/c3dparts, removed; see git history).
 //
 // The GLB keeps the STEP coordinates (mm, Z up). The part tells Circuit Studio how to place it: `modelCenter`
 // (bounding-box centre of the GLB), `modelOrientation` (Euler XYZ, radians) and `dimensions` measured on the GLB
@@ -225,8 +225,8 @@ export async function convert(spec: Spec): Promise<Conversion> {
   const {oc} = model;
   const kept = model.solids.filter(s => spec.minVolume <= 0 || volume(oc, s.shape) >= spec.minVolume);
   if (!kept.length) throw new Error(`simplify.minVolume ${spec.minVolume} removes every solid`);
-  // Mesh first, as the GLB needs it anyway: bounding boxes then use the triangulation, which is fast and gives the
-  // same boxes (centre, dimensions, pin positions) as the Python reference.
+  // Mesh first, as the GLB needs it anyway; the colour rules' size tests then measure solids on the triangulation,
+  // which is fast. Centre and dimensions are measured on the GLB below.
   for (const s of kept) new oc.BRepMesh_IncrementalMesh_2(s.shape, spec.meshLinear, false, spec.meshAngular, false);
   const coloured: ColouredSolid[] = kept.map(s => ({shape: s.shape, colour: solidColour(oc, spec, s)}));
 
