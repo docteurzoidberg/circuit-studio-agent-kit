@@ -36,7 +36,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D13 | The skills offer to record, in a **`.circuitstudio/` folder at the root of the user's project**, the steps of the kit's integration and the generated files that only Circuit Studio or the kit use afterwards. The user decides whether to commit it, depending on its content. The wiring document itself stays where the user chose (the skill always asks). Content to be defined (open question 6). |
 | D14 | `wiring-parts` (2026-11-16): at launch it takes a **snapshot of the Circuit Studio catalog** (from the automation API `listParts()` once upstream has it; until then from Circuit Studio's sources: a local checkout when present, offline, else the author's repository, downloaded only after asking (D15); script `tools/catalog/snapshot.mjs`) (built-in parts and their pins) into `.circuitstudio/catalog.json`, compares it with the parts of the validated wiring document and the model files found in the project, lists the missing parts, then proposes how to get each (online search, modelling from the technical drawings available, stand-in). Prepared parts go to **`.circuitstudio/parts/<id>/`** (`part.yaml`, `.c3dcomponent`, preview). Built in this order: the `part inspect` / `part convert` command line from the spike prototype first, then the skill on top; the skill's first version covers model files already in the project and stand-ins, online search and modelling come next. User guide: [docs/user-guide/skills/wiring-parts.md](docs/user-guide/skills/wiring-parts.md). |
 | D15 | **No external call without asking** (2026-11-16): every skill asks the user before any network access (fetching the Circuit Studio catalog, an online search for a model or a datasheet, a download), saying what it will fetch and from where, and offers to go on without it. |
-| D16 | **Node is the only runtime a user needs** (2026-11-16): `npx`, the MCP server, driving the browser for rendering and reading the Circuit Studio catalog all need Node anyway. The STEP converter is to be ported from Python (CadQuery) to Node with OpenCascade compiled to WebAssembly (`opencascade.js`), after a trial on the Claudemètre's MRD076A; the Python `tools/c3dparts/` stays the reference its outputs are compared with, and an optional fallback if the trial fails. Supersedes the engine part of D12. |
+| D16 | **Node is the only runtime a user needs** (2026-11-16): `npx`, the MCP server, driving the browser for rendering and reading the Circuit Studio catalog all need Node anyway. The STEP converter is ported from Python (CadQuery) to Node with OpenCascade compiled to WebAssembly: `opencascade.js` 2.0.0-beta.b5ff984, pinned (the only build with the STEP colour/name reader and the glTF writer; `replicad-opencascadejs` lacks both). Trial on the Claudemètre's MRD076A: same solids, faces and names as CadQuery, 61 s, 1.7 GB peak, a 64 MB package instead of a 1.8 GB Python environment ([docs/part-converter-plan.md](docs/part-converter-plan.md)). The Python `tools/c3dparts/` stays as the reference the Node outputs are tested against; it is not shipped. Supersedes the engine part of D12. |
 
 ## Architecture
 
@@ -205,6 +205,14 @@ Last update: 2026-11-16. Resume from here.
 8. **Reference project end to end**, then the remaining upstream issues and pull requests.
 
 ## Open questions
+
+Ideas kept for later (not planned until needed):
+
+- **Optional model module** (2026-11-16): if the WebAssembly converter proves heavy, ship model conversion, creation and
+  simplification as an optional part of the kit that `init` offers only to users with models to convert; users with
+  catalog parts and stand-ins keep a light kit. Until then the skills are designed and tested as if it were always there.
+- **`circuitstudio-opencascade`**: a fork of `opencascade.js`, maintained by us, only if we ever need to add or change
+  something in the OpenCascade build (a missing class, a fix, a newer OCCT).
 
 1. Package name, and npm package versus Claude Code plugin (or both).
 2. ~~Where the wiring document lives~~ — `wiring-plan` always asks the user; tool-only files go to

@@ -69,9 +69,28 @@ flowchart LR
 
 ## STEP engine
 
-Decision (PLAN.md, D12): **Python + CadQuery 2.8 first** (exact geometry, proven in the spike, same as upstream).
-Evaluate a WASM engine (e.g. `occt-import-js`) when packaging for `npx`, since a 1.8 GB Python environment does
-not fit a one-command install. The spec format stays the same whatever the engine.
+Decision (PLAN.md, D16, superseding D12): **Node with OpenCascade compiled to WebAssembly**, `opencascade.js`
+2.0.0-beta.b5ff984 (pinned). The Python + CadQuery implementation in `tools/c3dparts/` (first, proven) stays as the
+reference: the Node converter is tested against its outputs on the same STEP files.
+
+Trial (2026-11-16, Node 22, WSL), reading with colours and names, scanning faces for cylinders, meshing and writing a
+GLB with OCCT's own glTF writer:
+
+| | Python (CadQuery 2.8, OCCT 7.9) | Node (opencascade.js 2.0 beta, WASM) |
+|---|---|---|
+| Fuse holder (7 solids, 641 faces) | — | 12.8 s, of which 5 s to load the module; 0.77 GB peak |
+| MRD076A + ESP32-S3 (888 solids, 16 891 faces, 24 MB STEP) | inspect 62 s / 0.63 GB; convert 46 s / 1.1 GB | read + mesh + GLB 61 s / 1.7 GB |
+| Same solids, faces and assembly names | reference | yes (34 names, non-ASCII ones too) |
+| Install size | 1.8 GB Python environment | 64 MB npm package (50 MB WASM) |
+
+API notes for the port: overloads carry `_1`, `_2` suffixes; `TDF_Label.FindAttribute_1` needs a
+`Handle_TDF_Attribute` (embind returns the derived `TDataStd_Name`); extended strings are read through
+`new TCollection_AsciiString_13(ext, 0).ToCString()` (UTF-8); `Quantity_Color.Red()` is linear RGB, convert to
+sRGB; solid colours are often set on sub-shape labels (`XCAFDoc_ShapeTool.GetSubShapes`), not only on the part.
+
+Packages considered: `opencascade.js` 1.1.1 (2021, older OCCT); `replicad-opencascadejs` 1.2.1 (maintained, 23 MB,
+but no `STEPCAFControl_Reader` and no `RWGltf_CafWriter`: no colours or names from STEP, no GLB). If the pinned beta
+ever blocks us, a custom `opencascade.js` build (our own fork, `circuitstudio-opencascade`) is the way out.
 
 ## Limits found in the spike
 
