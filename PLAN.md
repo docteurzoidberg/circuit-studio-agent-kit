@@ -125,17 +125,58 @@ parts and wires have stable IDs, so a merge looks feasible (to be confirmed by t
 Candidates, detailed in the study: automation API, video settings stored in the project, URL parameters,
 compact wiring import, import adapters, Linux test path. Each starts as an issue upstream.
 
+## Status and next steps
+
+Last update: 2026-11-16. Resume from here.
+
+### Done
+
+- **Feasibility study and spike** (phases 1 and 2): a Markdown wiring document plus parts converted from STEP
+  files gave a correct 1080p wiring video of the reference project, rendered by Circuit Studio. Results, tests A
+  to G and findings: [docs/feasibility-results.md](docs/feasibility-results.md).
+- **Circuit Studio changes, all four written** ([docs/upstream-contributions.md](docs/upstream-contributions.md)):
+
+  | Change | State |
+  |---|---|
+  | Base-path assets | Open upstream: issue #1, pull request #2 |
+  | Model references | Open upstream: issue #3, pull request #4 |
+  | Presentation in project | Fork branch `feat/presentation-in-project`, not proposed yet (draft texts ready) |
+  | Automation API | Fork branch `feat/automation-api` (built on the two above), not proposed yet (no draft texts yet) |
+
+- **Reference example**: [examples/claudemetre/wiring.md](examples/claudemetre/wiring.md), the typical document
+  `wiring-plan` should write and the next skills consume (parts with model paths, connections, layout hints,
+  checks). The generated `claudemetre.c3dproj` stays local (it embeds models from third-party STEPs).
+- **Findings that shape the next phases**: wires must use `routeMode: "clean"`; the clean router can block a
+  connection depending on part placement, so the project builder must check `routingBlocked` and move parts;
+  heavy meshes drive render time, so `wiring-parts` simplifies models; bug 3 is intended behaviour.
+
+### Next steps
+
+1. **Follow upstream** at the start of each session: state of #1 to #4, review comments, rebase the fork
+   branches if `main` moved; update the README State column and docs/upstream-contributions.md.
+2. **Propose the next changes** once the maintainer has reacted to #2 and #4: Presentation in project (texts in
+   [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md)), then the Automation API
+   (draft texts to write).
+3. **Phase 3, document format**: template from examples/claudemetre/wiring.md, deterministic parser with
+   line-numbered validation messages, pin resolution through `listParts()` pins and aliases.
+4. **Phase 4, part converter**: `part inspect` and `part convert` per
+   [docs/part-converter-plan.md](docs/part-converter-plan.md), starting from `spike/prepare_parts.py`.
+5. **Phase 5, project builder**: Markdown to `.c3dproj` with clean routing, layout hints, automatic placement
+   that retries blocked routes, and merge of manual edits.
+6. Then phases 6 to 8 below.
+
 ## Phases
 
-1. **Feasibility study** (current) — upstream study, reference project case, format and architecture decisions.
+1. **Feasibility study** — done 2026-11-16: upstream study, reference project case, format and architecture
+   decisions.
 2. **Spike** — done 2026-11-16, see [docs/feasibility-results.md](docs/feasibility-results.md): hosted site
    unusable, local clone works, an automation API (F1) and video settings in the project (F2) are needed upstream.
-3. **Document format** — template, parser, validation messages; tested on the reference project's wiring.
+3. **Document format** (next) — template, parser, validation messages; tested on the reference project's wiring.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
 5. **Project builder** — Markdown to `.c3dproj` with automatic layout and routing; merge with manual edits.
 6. **Rendering CLI** — `render` with MP4, WebP and poster outputs.
 7. **Skills and MCP server** — `wiring-plan`, `wiring-parts`, `wiring-video`; packaging and `init`.
-8. **Reference project end to end**, then upstream issues and pull requests.
+8. **Reference project end to end**, then the remaining upstream issues and pull requests.
 
 ## Open questions
 
