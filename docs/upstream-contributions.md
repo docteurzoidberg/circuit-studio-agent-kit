@@ -11,7 +11,7 @@ the new `upstream/main` and switch our tooling from the spike workaround to the 
 | Plan item | Issue | Pull request | Fork branch | State | Follow-up once merged |
 |---|---|---|---|---|---|
 | PR 0 · base-path assets | [#1](https://github.com/arslansadiq87/circuit-studio/issues/1) | [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) | `fix/base-path-assets` | Open (2026-11-16) | Hosted site usable for previews; update access modes in upstream-study.md |
-| PR 1 · F4 model references | — | — | `fix/model-reference-from-catalog` | Ready locally, draft in [upstream-drafts](upstream-drafts/pr1-model-references.md) | Drop the model-geometry restore from the spike scripts |
+| PR 1 · F4 model references | [#3](https://github.com/arslansadiq87/circuit-studio/issues/3) | [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) | `fix/model-reference-from-catalog` | Open (2026-11-16) | Drop the model-geometry restore from the spike scripts |
 | PR 2 · F2 presentation in project | — | — | — | Not started | Write the presentation block from our generator |
 | PR 3 · F1 automation API | — | — | — | Not started | Replace dev-server module imports with `window.circuitStudio` |
 

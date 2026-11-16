@@ -1,7 +1,9 @@
-# Draft — PR 1 (F4): built-in model references from `modelId`
+# PR 1 (F4): built-in model references from `modelId`
 
 Fork branch: `fix/model-reference-from-catalog` (commit `424a03e`, on top of upstream `47b06b3`; independent of
-PR 0). Not opened yet.
+PR 0).
+Opened 2026-11-16: issue https://github.com/arslansadiq87/circuit-studio/issues/3, pull request
+https://github.com/arslansadiq87/circuit-studio/pull/4. Texts below are as sent.
 
 ## Issue
 
@@ -58,7 +60,7 @@ fix it differently, for example by migrating saved files only, I am happy to ada
 
 **Body:**
 
-Fixes #<issue>.
+Fixes #3.
 
 Saved projects can keep only `geometry: {kind: "model"}` for a built-in part (the upstream fixture
 `crowded-c6-project.json` does). Video export then failed with "No model asset reference".
