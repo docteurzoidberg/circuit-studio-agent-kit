@@ -24,7 +24,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D2 | Source of truth is a **structured but free-form Markdown** wiring document, not a strict YAML file. |
 | D3 | The Markdown document is **read by the skills, not by a parser** (revised 2026-11-16). A skill resolves it into a committed `wiring.json` ([schema](schema/wiring.schema.json)); the CLI reads only that file, without an LLM, so hooks and CI can render without Claude. The JSON records the document's hash, so the CLI reports when it is stale. Template and JSON format evolve as the next phases need new fields. |
 | D4 | 3D parts (STEP, GLB, part definitions) live in the user's project; the user decides whether they may be published. |
-| D5 | Distribution is a single npm package with a CLI, in the style of REA: `npx <name> init`, `<name> render`, `<name> mcp`. A Claude Code plugin is evaluated as an alternative. |
+| D5 | Distribution is a single npm package with a CLI, in the style of REA: `npx <name> init`, `<name> render`, `<name> mcp`, `npx <name> uninstall`. A Claude Code plugin is evaluated as an alternative. |
 | D6 | Upstream changes are made in the fork first and proposed as pull requests later. |
 | D7 | Everything written in this repository and upstream (docs, skills, code, PRs, commits) is in English. |
 | D8 | The architecture below (three skills, Markdown source, CLI + MCP, generated `.c3dproj`, user-chosen automation) is validated (2026-11-16). |
@@ -60,10 +60,15 @@ npx <name> init                # install the skills, register the MCP server
 <name> check docs/wiring.json  # validate the resolved wiring (schema, parts, pins, stale hash)
 <name> render docs/wiring.json --out docs/media/
 <name> mcp                     # MCP server entry point
+npx <name> uninstall           # remove what init installed
 ```
 
 The CLI holds all the logic; the MCP server and the skills call it. A user can automate rendering with the CLI
 alone, without Claude.
+
+`uninstall` undoes exactly what `init` did: it removes the installed skills and the MCP server registration,
+and lists what it removed. `init` records what it installs so that `uninstall` touches nothing else. The
+project's own files (wiring documents, `wiring.json`, parts, rendered videos) are never removed.
 
 ### Skills
 
@@ -183,7 +188,7 @@ Last update: 2026-11-16. Resume from here.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
 5. **Project builder** — Markdown to `.c3dproj` with automatic layout and routing; merge with manual edits.
 6. **Rendering CLI** — `render` with MP4, WebP and poster outputs.
-7. **Skills and MCP server** — `wiring-plan`, `wiring-parts`, `wiring-video`; packaging and `init`.
+7. **Skills and MCP server** — `wiring-plan`, `wiring-parts`, `wiring-video`; packaging, `init` and `uninstall`.
 8. **Reference project end to end**, then the remaining upstream issues and pull requests.
 
 ## Open questions

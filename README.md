@@ -79,6 +79,7 @@ npx <name> init                                   # install the skills, register
 <name> part convert board.step --spec board.yaml  # STEP model to Circuit Studio part
 <name> render docs/wiring.json --out docs/media/  # MP4 + WebP + poster
 <name> mcp                                        # MCP server for any agent
+npx <name> uninstall                              # remove what init installed, keep the project's files
 ```
 
 ## What the feasibility study showed
