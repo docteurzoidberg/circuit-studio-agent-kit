@@ -94,12 +94,15 @@ Tested on a real project, the [Claudemètre](https://github.com/docteurzoidberg/
 Small, focused pull requests, each discussed in an issue first. Details in
 [docs/tool-changes-plan.md](docs/tool-changes-plan.md).
 
-| PR | Change |
-|---|---|
-| 0 | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) |
-| 1 | Built-in model references resolved from `modelId` when a project does not carry them |
-| 2 | Optional presentation block in the project: video settings, shot overrides, saved camera scenes |
-| 3 | A documented automation API (`window.circuitStudio`) available in production builds |
+| PR | Change | State |
+|---|---|---|
+| 0 | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) | **Open**: issue [#1](https://github.com/arslansadiq87/circuit-studio/issues/1), PR [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) |
+| 1 | Built-in model references resolved from `modelId` when a project does not carry them | **Open**: issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3), PR [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) |
+| 2 | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **In progress, not published yet**: implemented and tested locally; planned issue and PR texts in [docs/upstream-drafts/pr2-presentation.md](docs/upstream-drafts/pr2-presentation.md) |
+| 3 | A documented automation API (`window.circuitStudio`) available in production builds | **Not started** |
+
+States are updated as the work moves; the full history is in
+[docs/upstream-contributions.md](docs/upstream-contributions.md).
 
 Bugs met during the study: [docs/upstream-bugs.md](docs/upstream-bugs.md). Status of what has been proposed:
 [docs/upstream-contributions.md](docs/upstream-contributions.md).
