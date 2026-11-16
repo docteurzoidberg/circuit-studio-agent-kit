@@ -120,8 +120,9 @@ routes, and what remains:
 
 - **Committing**: `wiring.json` is meant to be committed with the project, since the command line renders from it.
   `project.c3dproj` embeds the prepared parts' models, often derived from third-party files that may not be
-  redistributable (as `wiring-parts` said about the parts, in `.circuitstudio/parts/`), and `build.json` only
-  matters next to it. Check what git ignores (`git check-ignore .circuitstudio/*` and `.circuitstudio/parts`), say
+  redistributable (as `wiring-parts` said about the parts, in `.circuitstudio/parts/`): publishing them is the
+  user's call and responsibility (D24). `build.json` only matters next to the project. Re-rendering the video in
+  CI later needs the parts and the project committed. Check what git ignores (`git check-ignore .circuitstudio/*` and `.circuitstudio/parts`), say
   what would be committed, and let the user decide; offer to add `.circuitstudio/project.c3dproj`,
   `.circuitstudio/build.json` (and `.circuitstudio/parts/` if `wiring-parts` did not settle it) to `.gitignore` if
   they want to keep them local. Never decide it for them.

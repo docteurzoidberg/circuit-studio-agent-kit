@@ -73,8 +73,8 @@ flowchart TD
   applies. When a move blocks a wire, the skill tries a few others before asking you. Wiring changes (a pin, a
   colour) go into the document.
 - **`wiring.json` is meant to be committed** with your project, since the command line renders from it. The
-  project file embeds the parts' models, which may come from third-party files: the skill tells you what git
-  would commit and lets you decide.
+  project file embeds the parts' models, which may come from third-party files: publishing them is your call and
+  responsibility. The skill tells you what git would commit and lets you decide.
 
 ## Tested on
 

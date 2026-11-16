@@ -73,6 +73,7 @@ flowchart TD
 | `.circuitstudio/parts/<id>/<id>.png` | The preview you checked |
 
 **Licences**: a prepared part embeds its model. A model downloaded from a third party (GrabCAD, a vendor site)
-is often not redistributable. The skill tells you which parts come from such models, checks whether git would
-commit `.circuitstudio/`, and you decide whether `.circuitstudio/parts/` is committed with your project; it
-offers to add it to `.gitignore` if not.
+is often not redistributable, and **you are responsible for the models you use and publish**: the kit never
+refuses one and never decides for you. The skill tells you which parts come from such models, checks whether git
+would commit `.circuitstudio/`, and you decide whether `.circuitstudio/parts/` is committed with your project; it
+offers to add it to `.gitignore` if not. Re-rendering the video in CI needs the parts committed.

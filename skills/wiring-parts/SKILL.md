@@ -170,8 +170,9 @@ edited the document meanwhile, read it again first and keep their changes.
 When every part is done, show a table: each part, how it is provided (catalog `modelId`, prepared in
 `.circuitstudio/parts/<id>/`, stand-in), its assumptions, and what remains to check on the real part. Then:
 
-- **Licences**: a prepared part embeds its model. Models from third parties (GrabCAD, a vendor site) are often
-  not redistributable: say which parts come from such models, as far as their notes tell. Check whether
+- **Licences** (D24): a prepared part embeds its model. Models from third parties (GrabCAD, a vendor site) are
+  often not redistributable: say which parts come from such models, as far as their notes tell, and that
+  publishing them is the user's call and responsibility, not the kit's. Never refuse such a model. Check whether
   `.circuitstudio/` or `.circuitstudio/parts/` is ignored by git (`git check-ignore`): if not, it will be
   committed with the project. Ask the user whether to commit the prepared parts, and offer to add
   `.circuitstudio/parts/` to `.gitignore` if they do not want to. Never decide it for them.
