@@ -186,12 +186,11 @@ Last update: 2026-11-16. Resume from here.
 
 ### Next steps
 
-1. **Follow upstream** at the start of each session: state of #1 to #4, review comments, rebase the fork
+1. **Follow upstream** at the start of each session: state of #1 to #6, review comments, rebase the fork
    branches if `main` moved; update the README State column and docs/upstream-contributions.md.
-2. **Propose the next changes** after the `wiring-parts` skill (decided 2026-11-16; the maintainer fixed #1 and #3
-   himself in `1713780`, so #2 and #4 are closed): Presentation in project (texts in
-   [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md)), then the Automation API
-   (draft texts to write).
+2. **Upstream changes**: the maintainer fixed #1 and #3 himself in `1713780` (#2 and #4 closed); Presentation in
+   project proposed on 2026-11-16 as issue #5 and pull request #6 (the maintainer merges it or implements it his
+   own way). Next: the Automation API (draft texts to write), once #6 is settled, rebased on what lands.
 3. **Phase 3, document format**, in the order a user meets it: (a) `wiring-plan` writes `wiring.md` from the
    project's sources — first version in [skills/wiring-plan/](skills/wiring-plan/) with its template, tested
    by a fresh agent on a local copy of the Claudemètre, being refined; (b) resolution into `wiring.json` —
@@ -209,8 +208,9 @@ Last update: 2026-11-16. Resume from here.
    load in Circuit Studio (`modelAssetId`, dimensions measured on the GLB). Tool improvements found by the test,
    for later: `inspect` does not find the tips of right-angle header pins; the preview draws hidden geometry
    (studs seen through a body) and overlaps pin labels in the front view; `mergeByColour` drops the reuse of
-   identical meshes and can make the file larger; a check that imports a part into Circuit Studio (automation
-   API: an `importPart` call). Then online search and modelling.
+   identical meshes and can make the file larger; a check of each part in Circuit Studio itself, through the
+   automation API's `openProject` and `renderImage` on a small project holding the part (projects embed their
+   parts' models, so no import call is needed). Then online search and modelling.
 5. **Phase 5, `wiring-project`**: the CLI `build` (`wiring.json` and parts to `.c3dproj`, clean routing, layout
    hints, automatic placement that retries blocked routes, merge of manual edits), then the skill and its review
    loop, tested by a fresh agent on the Claudemètre copy.

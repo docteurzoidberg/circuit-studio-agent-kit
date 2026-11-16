@@ -3,8 +3,8 @@
 Agent skills, an MCP server and a CLI that turn an electronics project's wiring documentation into a 3D wiring
 video, using [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio) (from Tech Panda) as the rendering engine.
 
-> Status: **feasibility study done, implementation started.** The first skill, `wiring-plan`, works (first
-> version); the others are in progress or planned (see [Skills](#skills)). This repository also holds the plan,
+> Status: **feasibility study done, implementation started.** The first two skills, `wiring-plan` and
+> `wiring-parts`, work (first versions); the others are planned (see [Skills](#skills)). This repository also holds the plan,
 > the study of Circuit Studio, the test scripts, and the changes we would like to propose upstream.
 
 ## Why
@@ -66,7 +66,8 @@ flowchart LR
    ```
 
 2. **Prepare the parts.** For each part missing from the Circuit Studio catalog, the `wiring-parts` skill uses
-   the project's own STEP model, or helps find or create one, then converts it into a Circuit Studio part:
+   the project's own STEP model (finding or modelling one comes later) or a stand-in box, and converts the model
+   into a Circuit Studio part:
    colours, measured pin positions, a mesh simplified only when the model is really complex, and a preview to
    check the pins.
 
@@ -137,8 +138,8 @@ request numbers on GitHub.
 |---|---|---|
 | **Base-path assets** | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) | **Fixed upstream** (2026-11-16) by the maintainer in [`1713780`](https://github.com/arslansadiq87/circuit-studio/commit/1713780), closing issue [#1](https://github.com/arslansadiq87/circuit-studio/issues/1); our pull request [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) closed as superseded |
 | **Model references** | Built-in model references resolved from `modelId` when a project does not carry them | **Fixed upstream** (2026-11-16) by the maintainer in [`1713780`](https://github.com/arslansadiq87/circuit-studio/commit/1713780), closing issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3); our pull request [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) closed as superseded |
-| **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); planned texts in [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md) |
-| **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on the presentation change) |
+| **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Proposed** (2026-11-16): issue [#5](https://github.com/arslansadiq87/circuit-studio/issues/5), pull request [#6](https://github.com/arslansadiq87/circuit-studio/pull/6) from the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); the maintainer may merge it or implement it his own way |
+| **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on the presentation change); proposed once #6 is settled |
 
 States are updated as the work moves; the full history is in
 [docs/upstream-contributions.md](docs/upstream-contributions.md).
@@ -161,7 +162,7 @@ wiring, as the `wiring-plan` skill writes it and describing the finished build, 
 | Document | Content |
 |---|---|
 | [PLAN.md](PLAN.md) | Goal, decisions, architecture, phases, open questions |
-| [docs/user-guide/skills/](docs/user-guide/skills/) | User guides of the skills (`wiring-plan`, `wiring-parts` draft) |
+| [docs/user-guide/skills/](docs/user-guide/skills/) | User guides of the skills (`wiring-plan`, `wiring-parts`) |
 | [docs/upstream-study.md](docs/upstream-study.md) | How Circuit Studio works, access modes, gaps |
 | [docs/feasibility-results.md](docs/feasibility-results.md) | Test results, findings, feature decisions |
 | [docs/tool-changes-plan.md](docs/tool-changes-plan.md) | Planned upstream pull requests |
