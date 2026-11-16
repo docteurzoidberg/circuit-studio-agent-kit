@@ -76,7 +76,10 @@ flowchart LR
    moves things by hand in the editor, and a later regeneration keeps those edits.
 
 4. **Render.** The `wiring-video` skill (or the CLI, or the MCP server) renders the project into an MP4 plus a
-   WebP and a poster image for the README. Rendering runs locally in Chrome with a GPU.
+   WebP and a poster image for the README. Circuit Studio renders it in the browser: the page connects to the
+   kit's MCP server and runs its requests (open the project, read the owner's edits, render); the kit drives no
+   browser. Until the author's site has the automation API, the page is a build of the fork on the owner's machine;
+   without it, the owner opens the project and renders the video themselves in Circuit Studio.
 
 5. **Automate, if wanted.** The CLI works without Claude, so the owner can re-render on push, in a hook or in CI.
 
@@ -84,9 +87,9 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 
 | Command | Step | What it does | State |
 |---|---|---|---|
-| `npx <name> init` | Setup | Installs the kit for the project or globally (it asks): skills, MCP server registration | Planned |
+| `npx <name> init` | Setup | Installs the kit for the project or globally (it asks): skills, MCP server registration, and the way to reach Circuit Studio: a local build (review and rendering automated) or by hand | Planned |
 | `npx <name> uninstall` | Setup | Removes exactly what `init` installed; the project's files stay | Planned |
-| `npx <name> mcp` | Setup | The MCP server, one tool per command, for any agent; registered by `init`, the agent starts and stops it itself | Planned |
+| `npx <name> mcp` | Setup | The MCP server, started by the agent with the session (registered by `init`): the bridge the Circuit Studio page connects to, and one tool per command for any agent | Planned |
 | `npx <name> check` | All | Where the project stands with the kit: steps done, step in progress, what to do next | Planned |
 | `npx <name> part catalog` | `wiring-parts` | Snapshot of the Circuit Studio catalog into `.circuitstudio/catalog.json` | Written ([tools/catalog/](tools/catalog/)); `--download` not tried yet |
 | `npx <name> part inspect <model.step>` | `wiring-parts` | What a STEP model holds: tree, colours, sizes, contact rows, complexity | Written ([tools/parts/](tools/parts/)) |
@@ -140,6 +143,7 @@ request numbers on GitHub.
 | **Built-in model fallback** | Saved parts whose geometry carries no model reference still use the built-in model (follow-up to [#3](https://github.com/arslansadiq87/circuit-studio/issues/3): the upstream fixture still opened with unavailable models) | **Proposed** (2026-11-16): pull request [#7](https://github.com/arslansadiq87/circuit-studio/pull/7), [comment](https://github.com/arslansadiq87/circuit-studio/issues/3#issuecomment-6928191181) on [#3](https://github.com/arslansadiq87/circuit-studio/issues/3) |
 | **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Proposed** (2026-11-16): issue [#5](https://github.com/arslansadiq87/circuit-studio/issues/5), pull request [#6](https://github.com/arslansadiq87/circuit-studio/pull/6) from the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); the maintainer may merge it or implement it his own way |
 | **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds: open a project, list parts, check wire routes, render images and videos | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on the presentation change); proposed once #6 is settled, texts in [docs/upstream-drafts/automation-api.md](docs/upstream-drafts/automation-api.md) |
+| **Bridge to the kit** | Opt-in connection of the page to a local automation client (URL parameter with its address and a token), which then drives the page through the automation API: open a project, read it back, render | **Planned** (phase 6): on a fork branch on top of the automation API, proposed after it |
 
 States are updated as the work moves; the full history is in
 [docs/upstream-contributions.md](docs/upstream-contributions.md).

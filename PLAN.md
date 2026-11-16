@@ -44,7 +44,8 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D17 | **The kit is written in TypeScript** (2026-11-16), like Circuit Studio, so agents and contributors read one language across both projects. Node 22 runs the `.ts` files directly (type stripping, erasable syntax only, imports ending in `.ts`); `npm run typecheck` checks them with `tsc`; the published package will be a built bundle. |
 | D20 | **`wiring-project` resolves the document into `wiring.json`** (2026-11-16), as its first step, instead of a second run of `wiring-plan` after the parts: the user goes straight from `wiring-parts` to `wiring-project`, and every build checks that `wiring.json` still matches its document. The skill reads the Markdown (D3) and looks pins up with `part pins` (prepared parts and the catalog snapshot, no `.c3dcomponent` to read); the CLI `wiring` checks the result with ajv against the schema, then parts, pins and the document's hash. Answers to ambiguities go into `wiring.md`, so a new resolution gives the same file. |
 | D21 | **`build` plans routes with Circuit Studio's own planner, run in Node** (2026-11-16): the project schema, the built-in part templates and the route planner (`src/model.ts`, `src/autoRouting.ts`) are bundled with esbuild from a local Circuit Studio checkout (the catalog snapshot's, or `--from`) into the kit's `.cache/engine/`, as `part catalog` already does, so `build` needs no browser and checks the routes the app will draw. The same planner is proposed upstream as `planRoutes()` in the automation API; `build` moves to it once upstream has it. Placement: layout hints, else the most connected part at the centre and each other part next to the pins its wires leave from (scored by orthogonal length and parts crossed); flat parts may turn, parts standing up keep the pose `wiring-parts` gave them; parts of blocked wires are moved a few times. Edits made in Circuit Studio win: `.circuitstudio/build.json` records what `build` wrote, so a placement, wire shape or camera that differs is the user's and is kept; the document still decides connections and colours. The review is done by the user in Circuit Studio until the browser driver of `render` can show images. |
-| D22 | **The review is done on the project loaded in Circuit Studio, with no preview of its own** (2026-11-16): a preview drawn by the kit could not replace looking at the generated project in Circuit Studio, which the user does anyway, so the kit draws none. What the review lacks is a shorter loop: a later command serves Circuit Studio from the local checkout, opens the project, reloads it at every build and sends the user's edits back to `.circuitstudio/project.c3dproj` (through the automation API, the fork's build until upstream has it); `render` drives the same server. Until then the user opens and saves the file. |
+| D22 | **The review is done on the project loaded in Circuit Studio, with no preview of its own** (2026-11-16): a preview drawn by the kit could not replace looking at the generated project in Circuit Studio, which the user does anyway, so the kit draws none. What the review lacks is a shorter loop: the page opens the project, reloads it at every build and sends the user's edits back to `.circuitstudio/project.c3dproj`, through the bridge of D23. Until then the user opens and saves the file. |
+| D23 | **Circuit Studio connects to the kit; the kit drives no browser** (2026-11-16): the Circuit Studio page opens a WebSocket to the kit on 127.0.0.1 (opt-in URL parameter carrying the address and a token; the kit accepts only that origin and token) and runs the kit's requests from the inside, through its automation API: open the project, read the user's edits, render. The bridge lives in the kit's MCP server, which Claude Code starts with the session, so nothing else is launched; the user, or the kit through the default browser, only opens the page; the page reconnects by itself; a skill that needs it and finds no page asks the user to open it or offers to. A second session takes the next port and names it in the URL it opens. The command line without MCP (`render` in CI) runs the same bridge for the time of the command, with a headless Chrome it only launches. Proposed upstream after the API, as a generic remote bridge of the automation API; until both are upstream the page is a build of the fork on this machine. Replaces driving a browser over its debugging port (a profile of its own, fragile from WSL: tried and dropped) and a skill driving the user's browser (dropped: it would need an agent for every render and the site's API anyway). At `init` the user chooses the local build (review and rendering automated) or the manual way: they open and save the project themselves, and neither loading nor rendering can be automated without a local copy of Circuit Studio until upstream has the API and the bridge. |
 
 ## Architecture
 
@@ -105,9 +106,14 @@ project's own files (wiring documents, `wiring.json`, parts, rendered videos) ar
 
 ### MCP server
 
-Thin wrapper over the CLI, so an agent without the skills reaches the same actions; one tool per command: `check`, `wiring`, `part_catalog`, `part_inspect`,
-`part_convert`, `part_pins`, `build_project`, `render_preview`, `render_video`. `init` registers it and the agent starts and
-stops it over stdio; a background HTTP mode with `mcp start` / `mcp stop` is an option if a user needs one.
+Claude Code starts it over stdio with the session (`init` registers it), so it is the one thing running while the
+user works. Two roles:
+
+- **Bridge to Circuit Studio** (D23): it listens on 127.0.0.1 for the Circuit Studio page and sends it the kit's
+  requests (open the project, read the user's edits, render). Tools: open the page in the default browser, page
+  status, open the project, sync the edits; rendering tools come with `render`.
+- **Wrapper over the CLI**, so an agent without the skills reaches the same actions; one tool per command:
+  `check`, `wiring`, `part_catalog`, `part_inspect`, `part_convert`, `part_pins`, `build_project`, `render_video`.
 
 ## Wiring document format
 
@@ -151,16 +157,18 @@ parts and wires have stable IDs, so a merge looks feasible (to be confirmed by t
 
 ## Rendering
 
-- Circuit Studio already renders the video in the browser (WebCodecs, H.264 MP4). The CLI serves the app,
-  drives a local Chrome, loads the project and calls the existing export.
-- Supported setups: Chrome on Linux or macOS, Windows Chrome driven from WSL.
+- Circuit Studio already renders the video in the browser (WebCodecs, H.264 MP4). The page connected to the kit
+  (D23) renders on the kit's request, through the automation API, and sends the file back.
+- With a user: the page they opened (to check: how rendering copes with a hidden tab, which browsers slow down).
+  Without one (CI): the command serves the local build and launches a headless Chrome on it, which connects alike.
 - Outputs: MP4, an animated WebP or GIF for READMEs, a poster PNG.
 - GitHub does not play a committed MP4 inline in a README; the README shows the WebP/GIF and links to the MP4.
 
 ## Upstream contributions (fork first, PRs later)
 
 Candidates, detailed in the study: automation API, video settings stored in the project, URL parameters,
-compact wiring import, import adapters, Linux test path. Each starts as an issue upstream.
+compact wiring import, import adapters, Linux test path; then the page's bridge to the kit (D23), after the API.
+Each starts as an issue upstream.
 
 ## Status and next steps
 
@@ -229,10 +237,18 @@ Last update: 2026-11-16. Resume from here.
    fixed, and asked for `--move` and `--dry-run`, added). Found on the way and fixed: the converter placed every instance of a repeated STEP shape on the first
    one (the MRD076A board measured 110.7 x 140.6 mm instead of 73.6 x 84.7 mm), with a regression test. Routing a
    whole project costs seconds (11 s for the 28 wires of the upstream fixture), so placement is scored without
-   routing and the planner runs once per attempt. For later: the live link of the review (D22, first step of
-   phase 6), presentation texts, stand-ins drawn with visible contacts, and a look at why turning the
+   routing and the planner runs once per attempt. For later: the live link of the review (D23, phase 6),
+   presentation texts, stand-ins drawn with visible contacts, and a look at why turning the
    LED strip stand-in (pins exiting upwards) blocked a wire between two other parts in the test.
-6. Then phases 6 to 8 below.
+6. **Phase 6, bridge and rendering** (D23):
+   1. Fork: the page's connection to the kit on a branch of its own on top of `feat/automation-api` (opt-in URL
+      parameter with address and token, reconnection, transfers in pieces), with tests; a pull request after the
+      API's.
+   2. Kit: the MCP server with the bridge and the review tools (open the page, status, open the project, sync the
+      edits); the review of `wiring-project` on it, tested by a fresh agent; `init` offers the local build or the
+      manual way.
+   3. `render` on the same bridge: MP4, WebP, poster; headless Chrome for CI.
+7. Then phases 7 and 8 below.
 
 ## Phases
 
@@ -245,11 +261,11 @@ Last update: 2026-11-16. Resume from here.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
 5. **Project** — first version done 2026-11-16: CLI `build` (`wiring.json` to `.c3dproj`) with automatic layout and
    routing, merge with manual edits; the `wiring-project` skill.
-6. **Rendering CLI** — Circuit Studio served locally with the project opened and kept in sync during the review
-   (D22), then `render` with MP4, WebP and poster outputs on the same server.
-7. **Skills and MCP server** — `wiring-video` (`wiring-plan` is done in phase 3, `wiring-parts` in phase 4,
-   `wiring-project` in phase 5); the MCP
-   server; packaging, `init` and `uninstall`.
+6. **Bridge and rendering** — the Circuit Studio page connects to the kit's MCP server (D23): live review of the
+   project, then `render` with MP4, WebP and poster outputs.
+7. **Skills and packaging** — `wiring-video` (`wiring-plan` is done in phase 3, `wiring-parts` in phase 4,
+   `wiring-project` in phase 5); the remaining MCP tools; packaging, `init` (with the choice of D23) and
+   `uninstall`.
 8. **Reference project end to end**, then the remaining upstream issues and pull requests.
 
 ## Open questions
@@ -281,4 +297,6 @@ Ideas kept for later (not planned until needed):
 | Upstream is two days old and changes fast | Pin a commit; keep the adapter thin; contribute a stable API |
 | Many parts missing from the catalog | `wiring-parts` skill; procedural fallback; parts reusable across projects |
 | Automatic layout unreadable on dense circuits | Keep manual edits in the generated project; review it in Circuit Studio before rendering |
-| Driving Windows Chrome from WSL is fragile | Validate in the spike; support native Chrome on Linux/macOS |
+| Driving a browser (Windows Chrome from WSL especially) is fragile | Avoided by D23: the page connects to the kit; only CI launches a headless Chrome |
+| Upstream refuses the bridge or the API | The local build of the fork stays the automated way (D23); the manual way always works |
+| A hidden tab slows rendering down | To check in phase 6; else ask the user to keep the page visible while it renders |
