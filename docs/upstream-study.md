@@ -47,7 +47,7 @@ The project is two days old and moves fast: any integration must pin a commit an
 
 ## Reference project case study
 
-A real project (ESP32-S3 desk gauge with ESPHome firmware) was read to check the approach against existing
+The [Claudemètre](https://github.com/docteurzoidberg/claudemetre) (ESP32-S3 desk gauge with ESPHome firmware) was read to check the approach against existing
 documentation. Its parts: ESP32-S3-DevKitC-1 plugged onto an MRD076A screw-terminal board, two SO-45 analog
 voltmeters, a TM1637 4-digit display, a 4-LED WS2812B strip, a 1N400x diode in series on 5 V, a 5 V supply,
 a panel fuse holder and an LP-16 connector.
