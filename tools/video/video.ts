@@ -44,7 +44,8 @@ export function writeVideo(root: string, video: VideoFile): void {
 export function describeSettings(settings: VideoSettings): string {
   const width = Number(settings.width);
   return [`mode ${settings.mode}`, `${width} × ${Math.round(width * 9 / 16)}`, `${settings.fps} fps`, String(settings.format),
-    `background ${settings.backgroundPresetId}`, `HUD ${settings.hudStyle}`, `labels ${settings.labels}`].join(', ');
+    `background ${settings.backgroundPresetId}`, `HUD ${settings.hudStyle}`, `labels ${settings.labels}`,
+    ...(settings.reveal === undefined ? [] : [`wire ${settings.reveal} s + hold ${settings.hold} s`])].join(', ');
 }
 
 /** `key=value` arguments, values read as numbers or booleans when they look like one. */
