@@ -1,18 +1,21 @@
 {
   "name": "circuit-studio-agent-kit",
   "private": true,
-  "description": "Claude Code skills, MCP server and command line that turn an electronics project's wiring into a 3D wiring video rendered by Circuit Studio.",
+  "description": "Claude Code skills, MCP server and command line that turn an electronics project's wiring into a 3D wiring video rendered by CircuitStudio from Tech Panda.",
   "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test tools/catalog/*.test.mjs"
+    "test": "node --test tools/catalog/*.test.mjs tools/parts/*.test.mjs"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "esbuild": "^0.25.0",
+    "opencascade.js": "2.0.0-beta.b5ff984",
     "three": "^0.186.1",
+    "yaml": "^2.9.1",
     "zod": "^4.6.7"
   }
 }

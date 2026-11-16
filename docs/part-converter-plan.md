@@ -83,6 +83,19 @@ GLB with OCCT's own glTF writer:
 | Same solids, faces and assembly names | reference | yes (34 names, non-ASCII ones too) |
 | Install size | 1.8 GB Python environment | 64 MB npm package (50 MB WASM) |
 
+Port done the same day in [tools/parts/](../tools/parts/) (`node tools/parts/cli.mjs inspect|convert`, tests with
+`npm test`). On the fixture both commands give the Python outputs exactly (reference JSON in
+`tools/parts/test/fixtures/`). On the MRD076A:
+
+| | Python | Node |
+|---|---|---|
+| `part inspect` | 60 s, 0.63 GB | 137 s, 0.79 GB; same facts (solids, faces, colours, 13 contact rows, names) |
+| `part convert` (with preview) | 35 s, 1.1 GB | 69 s, 1.3 GB; same 44 pins, dimensions and centre; GLB 8.6 MB instead of 14 MB |
+
+Where the time goes in WebAssembly: reading the STEP (41 s) and exact bounding boxes, slow on some faces (0.7 s
+per terminal-block body). Each solid's box is computed once and group boxes are unions; `convert` meshes before
+measuring, as the Python version did, so its boxes come from the triangulation (fast, same values).
+
 API notes for the port: overloads carry `_1`, `_2` suffixes; `TDF_Label.FindAttribute_1` needs a
 `Handle_TDF_Attribute` (embind returns the derived `TDataStd_Name`); extended strings are read through
 `new TCollection_AsciiString_13(ext, 0).ToCString()` (UTF-8); `Quantity_Color.Red()` is linear RGB, convert to

@@ -1,0 +1,298 @@
+{
+ "file": "test-board.step",
+ "bounds": {
+  "min": [
+   -15.0,
+   -10.0,
+   -3.0
+  ],
+  "max": [
+   15.0,
+   10.0,
+   8.5
+  ],
+  "size": [
+   30.0,
+   20.0,
+   11.5
+  ]
+ },
+ "solids": 11,
+ "complexity": {
+  "faces": 57,
+  "verdict": "simple",
+  "reasons": []
+ },
+ "volumes": {
+  "total": 1583.1,
+  "smallestSolidsBelow": {
+   "<0.1": 1,
+   "<1": 1,
+   "<10": 8,
+   "<100": 9
+  }
+ },
+ "colours": {
+  "distinct": 4,
+  "bySolid": {
+   "#e4bb5c": 4,
+   "#a4a4aa": 3,
+   "#1a7a3a": 2,
+   "#141414": 2
+  },
+  "faceColours": 0
+ },
+ "tree": [
+  {
+   "path": "Header",
+   "solids": 5,
+   "size": [
+    10.16,
+    2.54,
+    11.5
+   ],
+   "min": [
+    -5.08,
+    3.73,
+    -3.0
+   ]
+  },
+  {
+   "path": "Header / Header body",
+   "solids": 1,
+   "size": [
+    10.16,
+    2.54,
+    2.5
+   ],
+   "min": [
+    -5.08,
+    3.73,
+    1.6
+   ]
+  },
+  {
+   "path": "Header / Pin 1",
+   "solids": 1,
+   "size": [
+    0.64,
+    0.64,
+    11.5
+   ],
+   "min": [
+    -4.13,
+    4.68,
+    -3.0
+   ]
+  },
+  {
+   "path": "Header / Pin 2",
+   "solids": 1,
+   "size": [
+    0.64,
+    0.64,
+    11.5
+   ],
+   "min": [
+    -1.59,
+    4.68,
+    -3.0
+   ]
+  },
+  {
+   "path": "Header / Pin 3",
+   "solids": 1,
+   "size": [
+    0.64,
+    0.64,
+    11.5
+   ],
+   "min": [
+    0.95,
+    4.68,
+    -3.0
+   ]
+  },
+  {
+   "path": "Header / Pin 4",
+   "solids": 1,
+   "size": [
+    0.64,
+    0.64,
+    11.5
+   ],
+   "min": [
+    3.49,
+    4.68,
+    -3.0
+   ]
+  },
+  {
+   "path": "PCB",
+   "solids": 1,
+   "size": [
+    30.0,
+    20.0,
+    1.6
+   ],
+   "min": [
+    -15.0,
+    -10.0,
+    0.0
+   ]
+  },
+  {
+   "path": "Terminal",
+   "solids": 4,
+   "size": [
+    15.0,
+    7.0,
+    5.0
+   ],
+   "min": [
+    -7.5,
+    -8.5,
+    1.6
+   ]
+  },
+  {
+   "path": "Terminal / Screw 1",
+   "solids": 1,
+   "size": [
+    2.5,
+    2.5,
+    1.0
+   ],
+   "min": [
+    -6.25,
+    -6.25,
+    5.6
+   ]
+  },
+  {
+   "path": "Terminal / Screw 2",
+   "solids": 1,
+   "size": [
+    2.5,
+    2.5,
+    1.0
+   ],
+   "min": [
+    -1.25,
+    -6.25,
+    5.6
+   ]
+  },
+  {
+   "path": "Terminal / Screw 3",
+   "solids": 1,
+   "size": [
+    2.5,
+    2.5,
+    1.0
+   ],
+   "min": [
+    3.75,
+    -6.25,
+    5.6
+   ]
+  },
+  {
+   "path": "Terminal / Terminal body",
+   "solids": 1,
+   "size": [
+    15.0,
+    7.0,
+    5.0
+   ],
+   "min": [
+    -7.5,
+    -8.5,
+    1.6
+   ]
+  },
+  {
+   "path": "Tiny",
+   "solids": 1,
+   "size": [
+    0.3,
+    0.3,
+    0.3
+   ],
+   "min": [
+    11.85,
+    7.85,
+    1.6
+   ]
+  }
+ ],
+ "treeEntries": 13,
+ "contacts": {
+  "rows": [
+   {
+    "kind": "post",
+    "axis": "z",
+    "size": 0.64,
+    "count": 4,
+    "start": [
+     -3.81,
+     5.0,
+     8.5
+    ],
+    "step": [
+     2.54,
+     0.0,
+     0.0
+    ],
+    "end": [
+     3.81,
+     5.0,
+     8.5
+    ],
+    "part": "Header / Pin 1",
+    "sizes": [
+     0.64
+    ],
+    "kinds": [
+     "post"
+    ],
+    "parts": [
+     "Header / Pin 1"
+    ]
+   },
+   {
+    "kind": "cylinder",
+    "axis": "z",
+    "size": 2.5,
+    "count": 3,
+    "start": [
+     -5.0,
+     -5.0,
+     6.6
+    ],
+    "step": [
+     5.0,
+     0.0,
+     0.0
+    ],
+    "end": [
+     5.0,
+     -5.0,
+     6.6
+    ],
+    "part": "Terminal / Screw 1",
+    "sizes": [
+     2.5
+    ],
+    "kinds": [
+     "cylinder"
+    ],
+    "parts": [
+     "Terminal / Screw 1"
+    ]
+   }
+  ],
+  "singles": [],
+  "singlesTotal": 0
+ }
+}

@@ -1,0 +1,16 @@
+id: test-board
+name: Test board
+step: test-board.step
+orientation: [0, 0, 90]
+mesh: { linear: 0.2, angular: 0.5 }
+simplify: { minVolume: 0.1, mergeByColour: true }
+pins:
+  - generate:
+      ids: "H{n}"
+      count: 4
+      start: [-3.81, 5, 8.5]
+      step: [2.54, 0, 0]
+      exit: [0, 0, 1]
+      labels: [VCC, GND, SDA]
+      aliases: { 4: [SCL0] }
+  - { id: T1, label: IN, at: [-5, -5, 6.6], exit: [0, -1, 0] }

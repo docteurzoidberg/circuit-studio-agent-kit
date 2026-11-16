@@ -1,0 +1,154 @@
+{
+ "id": "test-board",
+ "name": "Test board",
+ "category": "module",
+ "dimensions": [
+  20.0,
+  30.0,
+  11.5
+ ],
+ "format": "glb",
+ "geometry": {
+  "kind": "model",
+  "quality": "detailed",
+  "modelFormat": "glb",
+  "category": "module",
+  "modelCenter": [
+   0.0,
+   0.0,
+   2.75
+  ],
+  "modelOrientation": [
+   0.0,
+   0.0,
+   1.5708
+  ],
+  "origin": [
+   0,
+   0,
+   0
+  ],
+  "calibrated": true,
+  "verified": false,
+  "sourceFilename": "test-board.step",
+  "sourceSha256": "8ce7f817a34a4c27c4e5d0e009b58df10ee74185751b8d325d87013d92d57c5b",
+  "meshCount": 4,
+  "materialCount": 4,
+  "triangleCount": 384
+ },
+ "pins": [
+  {
+   "id": "H1",
+   "label": "VCC",
+   "side": "top",
+   "index": 0,
+   "localPosition": [
+    -5.0,
+    -3.81,
+    5.75
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "electrical": "passive",
+   "exitDirection": [
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "id": "H2",
+   "label": "GND",
+   "side": "top",
+   "index": 1,
+   "localPosition": [
+    -5.0,
+    -1.27,
+    5.75
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "electrical": "passive",
+   "exitDirection": [
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "id": "H3",
+   "label": "SDA",
+   "side": "top",
+   "index": 2,
+   "localPosition": [
+    -5.0,
+    1.27,
+    5.75
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "electrical": "passive",
+   "exitDirection": [
+    0.0,
+    0.0,
+    1.0
+   ]
+  },
+  {
+   "id": "H4",
+   "label": "H4",
+   "side": "top",
+   "index": 3,
+   "localPosition": [
+    -5.0,
+    3.81,
+    5.75
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "electrical": "passive",
+   "exitDirection": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "aliases": [
+    "SCL0"
+   ]
+  },
+  {
+   "id": "T1",
+   "label": "IN",
+   "side": "right",
+   "index": 4,
+   "localPosition": [
+    5.0,
+    -5.0,
+    3.85
+   ],
+   "orientation": [
+    0,
+    0,
+    0
+   ],
+   "electrical": "passive",
+   "exitDirection": [
+    1.0,
+    0.0,
+    0.0
+   ]
+  }
+ ]
+}
