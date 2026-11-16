@@ -1,0 +1,152 @@
+import assert from 'node:assert/strict';
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {after, before, describe, test} from 'node:test';
+import {WebSocket} from 'ws';
+import {KitServer} from '../mcp/server.ts';
+import type {CsProject} from '../project/engine.ts';
+import {Bridge, CLOSE_REJECTED, CLOSE_REPLACED, findBuild} from './bridge.ts';
+import {applyEdits, changes, snapshot} from './edits.ts';
+import {openCommand} from './open.ts';
+
+const temp = mkdtempSync(join(tmpdir(), 'kit-bridge-'));
+const build = join(temp, 'circuit-studio', 'dist');
+mkdirSync(join(build, 'assets'), {recursive: true});
+writeFileSync(join(build, 'index.html'), '<!doctype html><title>Circuit Studio</title>');
+writeFileSync(join(build, 'assets', 'index.js'), "note.textContent='Automation client: connected'");
+process.env.CIRCUIT_STUDIO_KIT_CONFIG = join(temp, 'config');
+
+const project = (): CsProject => ({
+  schemaVersion: 1, name: 'Demo', camera: {position: [0, -100, 200], target: [0, 0, 0]},
+  components: [
+    {id: 'mcu', modelId: 'generic-pcb', name: 'MCU', position: [0, 0, 0], rotation: [0, 0, 0], pins: []},
+    {id: 'led', modelId: 'generic-pcb', name: 'LED', position: [40, 0, 0], rotation: [0, 0, 0], pins: []},
+  ],
+  wires: [{id: 'w1', from: {componentId: 'mcu', pinId: 'a'}, to: {componentId: 'led', pinId: 'b'}, color: '#bf3128',
+    diameter: 1.1, label: 'MCU A → LED B', curvature: 19, routeMode: 'clean'}],
+  assets: {model: 'AAAA'},
+});
+
+/** A fake Circuit Studio page: connects like the real one and answers from a project it holds. */
+async function page(bridge: Bridge, {token = bridge.token, origin = bridge.base.replace(/\/$/, '')} = {}) {
+  const ws = new WebSocket(`ws://127.0.0.1:${bridge.port}/bridge`, {origin});
+  let held: CsProject | undefined;
+  const closed = new Promise<number>(resolve => ws.on('close', code => resolve(code)));
+  ws.on('message', data => {
+    const {id, method, params} = JSON.parse(String(data));
+    if (method === 'openProject') {
+      held = JSON.parse(params[0]);
+      ws.send(JSON.stringify({id, result: {name: held!.name, components: held!.components.length, wires: held!.wires.length}}));
+    } else if (method === 'getProject') ws.send(JSON.stringify({id, result: {...held, assets: undefined}}));
+    else if (method === 'renderVideo') {
+      ws.send(JSON.stringify({id, progress: {progress: 0.5}}));
+      ws.send(JSON.stringify({id, result: {frames: 2}}));
+    } else ws.send(JSON.stringify({id, error: {message: `Unknown method: ${method}`}}));
+  });
+  await new Promise((resolve, reject) => {
+    ws.once('open', resolve);
+    ws.once('error', reject);
+    ws.once('unexpected-response', () => reject(new Error('refused')));
+  }).then(() => ws.send(JSON.stringify({type: 'hello', token, protocol: 1, api: 1})));
+  return {ws, closed, held: () => held!, edit: (change: (p: CsProject) => void) => change(held!)};
+}
+
+after(() => rmSync(temp, {recursive: true, force: true}));
+
+describe('edits', () => {
+  test('finds the parts moved or turned and the routes reshaped, and writes them into the file', () => {
+    const file = project(), edited = project();
+    edited.components[1].position = [60, 20, 0];
+    edited.components[0].rotation = [0, 0, 0.004];  // below the tolerance: not an edit
+    edited.wires[0].bendPoints = [[10, 10, 0]];
+    edited.wires[0].routeMode = 'manual';
+    const changed = changes(snapshot(file), snapshot(edited));
+    assert.deepEqual(changed, {parts: ['led'], wires: ['w1']});
+    assert.deepEqual(changes(snapshot(file), snapshot(edited), {wires: false}).wires, []);
+    assert.deepEqual(applyEdits(file, edited, changed), ['LED x 60, y 20, 0°', 'wire MCU A → LED B: route reshaped']);
+    assert.deepEqual(file.components[1].position, [60, 20, 0]);
+    assert.equal(file.wires[0].routeMode, 'manual');
+    assert.deepEqual(file.assets, {model: 'AAAA'});
+  });
+});
+
+describe('open in the browser', () => {
+  test('uses the system\'s own way, PowerShell under WSL', () => {
+    const [command, args] = openCommand("http://127.0.0.1:5199/#bridge=ws://127.0.0.1:5199/bridge&token=a'b", true);
+    assert.match(command, /powershell\.exe$/);
+    assert.equal(args.at(-1), "Start-Process 'http://127.0.0.1:5199/#bridge=ws://127.0.0.1:5199/bridge&token=a''b'");
+  });
+});
+
+describe('bridge', () => {
+  let bridge: Bridge;
+  before(async () => {
+    bridge = new Bridge({build: findBuild(join(temp, 'circuit-studio'))});
+    await bridge.start();
+  });
+  after(() => bridge.close());
+
+  test('serves the build, and links to it with the bridge address and token', async () => {
+    assert.match(bridge.pageUrl, new RegExp(`^http://127\\.0\\.0\\.1:${bridge.port}/#bridge=ws://127\\.0\\.0\\.1:${bridge.port}/bridge&token=[0-9a-f]{32}$`));
+    assert.match(await (await fetch(bridge.base)).text(), /Circuit Studio/);
+    assert.match(await (await fetch(`${bridge.base}some/route`)).text(), /Circuit Studio/);
+    assert.equal((await fetch(`${bridge.base}assets/index.js`)).headers.get('content-type'), 'text/javascript');
+  });
+
+  test('refuses a build without the bridge', () => {
+    const plain = join(temp, 'plain');
+    mkdirSync(join(plain, 'assets'), {recursive: true});
+    writeFileSync(join(plain, 'index.html'), '');
+    writeFileSync(join(plain, 'assets', 'index.js'), '');
+    assert.throws(() => findBuild(plain), /no bridge to the kit/);
+  });
+
+  test('refuses another origin and a wrong token', async () => {
+    await assert.rejects(page(bridge, {origin: 'https://example.com'}));
+    const wrong = await page(bridge, {token: 'nope'});
+    assert.equal(await wrong.closed, CLOSE_REJECTED);
+    assert.equal(bridge.connected, false);
+  });
+
+  test('calls the page, with progress, and lets a newer page take over', async () => {
+    const first = await page(bridge);
+    assert.equal(await bridge.waitForPage(2000), true);
+    const progress: unknown[] = [];
+    assert.deepEqual(await bridge.call('renderVideo', [{}], p => progress.push(p)), {frames: 2});
+    assert.deepEqual(progress, [{progress: 0.5}]);
+    await assert.rejects(bridge.call('nope'), /Unknown method: nope/);
+    const second = await page(bridge);
+    assert.equal(await first.closed, CLOSE_REPLACED);
+    assert.equal(bridge.connected, true);
+    second.ws.close();
+    await second.closed;
+    await assert.rejects(bridge.call('getProject'), /no Circuit Studio page/);
+  });
+});
+
+describe('MCP tools of the review', () => {
+  test('open the project in the page, then save the user\'s edits into the file', async () => {
+    const root = join(temp, 'project');
+    mkdirSync(join(root, '.circuitstudio'), {recursive: true});
+    const file = join(root, '.circuitstudio', 'project.c3dproj');
+    writeFileSync(file, JSON.stringify(project()));
+    const kit = new KitServer(root, () => {});
+    try {
+      assert.match(kit.status(), /No Circuit Studio configured/);
+      const bridge = (await kit.ensureBridge({from: join(temp, 'circuit-studio')}))!;
+      assert.match(await kit.open({openBrowser: false, waitSeconds: 0.2}), /No Circuit Studio page connected[\s\S]*#bridge=/);
+      const fake = await page(bridge);
+      assert.match(await kit.open({openBrowser: false}), /2 parts, 1 wires/);
+      assert.match(await kit.sync(), /No edit/);
+      fake.edit(p => { p.components[0].position = [-30, 10, 0]; p.components[0].rotation = [0, 0, 180]; });
+      assert.match(await kit.sync(), /MCU x -30, y 10, 180°/);
+      const saved = JSON.parse(readFileSync(file, 'utf8')) as CsProject;
+      assert.deepEqual(saved.components[0].position, [-30, 10, 0]);
+      assert.deepEqual(saved.assets, {model: 'AAAA'});
+      assert.match(kit.status(), /page: connected/);
+    } finally {
+      await kit.close();
+    }
+  });
+});

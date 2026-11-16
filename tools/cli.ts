@@ -7,6 +7,7 @@ import {parseArgs} from 'node:util';
 import {catalog, describe, type CatalogOptions} from './catalog/catalog.ts';
 import {convertCommand, inspectCommand, type PartOptions} from './parts/commands.ts';
 import {projectRoot} from './project.ts';
+import {startMcp} from './mcp/server.ts';
 import {build, formatBuild} from './project/build.ts';
 import {checkWiring, formatReport} from './wiring/check.ts';
 import {formatPins, PartLibrary} from './wiring/pins.ts';
@@ -33,8 +34,11 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
       back to automatic or layout placement, --dry-run writes nothing (to try placements); plans the
       routes with Circuit Studio's planner (from the catalog's checkout, or --from); exit code 1 when
       wires stay blocked
+  mcp
+      the MCP server, over stdio (the agent starts it with the session): the bridge the Circuit Studio
+      page connects to, and the tools of the review (studio_status, studio_open, studio_sync)
 
-  planned: init, uninstall, mcp, check, render`;
+  planned: init, uninstall, check, render`;
 
 const OPTIONS = {
   json: {type: 'boolean'}, out: {type: 'string'}, preview: {type: 'string'}, 'no-preview': {type: 'boolean'},
@@ -106,6 +110,11 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
         dryRun: options['dry-run']});
       out(options.json ? JSON.stringify(report, null, 1) : formatBuild(report));
       return report.blocked.length ? 1 : 0;
+    }
+    if (command === 'mcp') {
+      if (args.length) throw new UsageError('mcp takes no argument');
+      await startMcp(cwd);
+      return 0;
     }
     if (command !== 'part') throw new UsageError(`unknown command: ${command}`);
     out(await part(args, options, cwd));

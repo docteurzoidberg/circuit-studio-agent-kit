@@ -46,6 +46,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D21 | **`build` plans routes with Circuit Studio's own planner, run in Node** (2026-11-16): the project schema, the built-in part templates and the route planner (`src/model.ts`, `src/autoRouting.ts`) are bundled with esbuild from a local Circuit Studio checkout (the catalog snapshot's, or `--from`) into the kit's `.cache/engine/`, as `part catalog` already does, so `build` needs no browser and checks the routes the app will draw. The same planner is proposed upstream as `planRoutes()` in the automation API; `build` moves to it once upstream has it. Placement: layout hints, else the most connected part at the centre and each other part next to the pins its wires leave from (scored by orthogonal length and parts crossed); flat parts may turn, parts standing up keep the pose `wiring-parts` gave them; parts of blocked wires are moved a few times. Edits made in Circuit Studio win: `.circuitstudio/build.json` records what `build` wrote, so a placement, wire shape or camera that differs is the user's and is kept; the document still decides connections and colours. The review is done by the user in Circuit Studio until the browser driver of `render` can show images. |
 | D22 | **The review is done on the project loaded in Circuit Studio, with no preview of its own** (2026-11-16): a preview drawn by the kit could not replace looking at the generated project in Circuit Studio, which the user does anyway, so the kit draws none. What the review lacks is a shorter loop: the page opens the project, reloads it at every build and sends the user's edits back to `.circuitstudio/project.c3dproj`, through the bridge of D23. Until then the user opens and saves the file. |
 | D23 | **Circuit Studio connects to the kit; the kit drives no browser** (2026-11-16): the Circuit Studio page opens a WebSocket to the kit on 127.0.0.1 (opt-in URL parameter carrying the address and a token; the kit accepts only that origin and token) and runs the kit's requests from the inside, through its automation API: open the project, read the user's edits, render. The bridge lives in the kit's MCP server, which Claude Code starts with the session, so nothing else is launched; the user, or the kit through the default browser, only opens the page; the page reconnects by itself; a skill that needs it and finds no page asks the user to open it or offers to. A second session takes the next port and names it in the URL it opens. The command line without MCP (`render` in CI) runs the same bridge for the time of the command, with a headless Chrome it only launches. Proposed upstream after the API, as a generic remote bridge of the automation API; until both are upstream the page is a build of the fork on this machine. Replaces driving a browser over its debugging port (a profile of its own, fragile from WSL: tried and dropped) and a skill driving the user's browser (dropped: it would need an agent for every render and the site's API anyway). At `init` the user chooses the local build (review and rendering automated) or the manual way: they open and save the project themselves, and neither loading nor rendering can be automated without a local copy of Circuit Studio until upstream has the API and the bridge. |
+| D24 | **The kit's user is responsible for the third-party models they use** (2026-11-16): a prepared part, the generated project and the rendered media embed or show models that may come from third-party STEP files (GrabCAD, vendor sites) with their own licences. The kit never refuses such a model nor decides for the user: the skills say which parts come from third-party models and that publishing them is the user's call and responsibility, and let them choose what is committed; the user guide says the same. Re-rendering a public project in CI needs its parts and project committed, so it is the same choice. |
 
 ## Architecture
 
@@ -245,8 +246,10 @@ Last update: 2026-11-16. Resume from here.
       parameter with address and token, reconnection, transfers in pieces), with tests; a pull request after the
       API's.
    2. Kit: the MCP server with the bridge and the review tools (open the page, status, open the project, sync the
-      edits); the review of `wiring-project` on it, tested by a fresh agent; `init` offers the local build or the
-      manual way.
+      edits) — written on 2026-11-16 (`tools/mcp/`, `tools/bridge/`, 7 tests) and checked end to end with the fork
+      branch `feat/kit-bridge` (written, 6 tests): the Claudemètre project opened in the page, an image rendered in
+      0.7 s; next, the review of `wiring-project` on it, tested by a fresh agent; `init` offers the local build or
+      the manual way.
    3. `render` on the same bridge: MP4, WebP, poster; headless Chrome for CI.
 7. Then phases 7 and 8 below.
 
@@ -287,8 +290,8 @@ Ideas kept for later (not planned until needed):
 6. Content of `.circuitstudio/` (D13). Decided: `catalog.json` and `parts/<id>/` (D14), `wiring.json`
    (only the kit reads it), the generated project `project.c3dproj` (written by `wiring-project`) and the
    rendered `media/` (2026-11-16: every command except `part` finds its files there). Candidates: an integration log (steps done, choices made, what `init` installed, which
-   `uninstall` reads), preview frames. To settle per file: committed or not (`wiring.json` must be committed
-   for rendering without Claude; parts derived from third-party STEP files may not be publishable).
+   `uninstall` reads), preview frames. Committed or not: `wiring.json` must be committed for rendering without
+   Claude; parts and project are the user's choice and responsibility when they hold third-party models (D24).
 
 ## Risks
 

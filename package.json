@@ -11,20 +11,23 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test tools/catalog/*.test.ts tools/parts/*.test.ts tools/wiring/*.test.ts tools/project/*.test.ts",
+    "test": "node --test tools/catalog/*.test.ts tools/parts/*.test.ts tools/wiring/*.test.ts tools/project/*.test.ts tools/bridge/*.test.ts",
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@resvg/resvg-js": "^2.6.2",
     "ajv": "^8.20.0",
     "esbuild": "^0.25.0",
     "opencascade.js": "2.0.0-beta.b5ff984",
     "three": "^0.186.1",
+    "ws": "^8.23.0",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
     "typescript": "^7.0.2"
   }
 }

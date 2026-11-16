@@ -89,7 +89,7 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 |---|---|---|---|
 | `npx <name> init` | Setup | Installs the kit for the project or globally (it asks): skills, MCP server registration, and the way to reach Circuit Studio: a local build (review and rendering automated) or by hand | Planned |
 | `npx <name> uninstall` | Setup | Removes exactly what `init` installed; the project's files stay | Planned |
-| `npx <name> mcp` | Setup | The MCP server, started by the agent with the session (registered by `init`): the bridge the Circuit Studio page connects to, and one tool per command for any agent | Planned |
+| `npx <name> mcp` | Setup | The MCP server, started by the agent with the session (registered by `init`): the bridge the Circuit Studio page connects to, and one tool per command for any agent | Written: the bridge and the review tools `studio_status`, `studio_open`, `studio_sync` ([tools/mcp/](tools/mcp/), [tools/bridge/](tools/bridge/)); the other tools planned |
 | `npx <name> check` | All | Where the project stands with the kit: steps done, step in progress, what to do next | Planned |
 | `npx <name> part catalog` | `wiring-parts` | Snapshot of the Circuit Studio catalog into `.circuitstudio/catalog.json` | Written ([tools/catalog/](tools/catalog/)); `--download` not tried yet |
 | `npx <name> part inspect <model.step>` | `wiring-parts` | What a STEP model holds: tree, colours, sizes, contact rows, complexity | Written ([tools/parts/](tools/parts/)) |
@@ -143,7 +143,7 @@ request numbers on GitHub.
 | **Built-in model fallback** | Saved parts whose geometry carries no model reference still use the built-in model (follow-up to [#3](https://github.com/arslansadiq87/circuit-studio/issues/3): the upstream fixture still opened with unavailable models) | **Proposed** (2026-11-16): pull request [#7](https://github.com/arslansadiq87/circuit-studio/pull/7), [comment](https://github.com/arslansadiq87/circuit-studio/issues/3#issuecomment-6928191181) on [#3](https://github.com/arslansadiq87/circuit-studio/issues/3) |
 | **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Proposed** (2026-11-16): issue [#5](https://github.com/arslansadiq87/circuit-studio/issues/5), pull request [#6](https://github.com/arslansadiq87/circuit-studio/pull/6) from the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); the maintainer may merge it or implement it his own way |
 | **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds: open a project, list parts, check wire routes, render images and videos | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on the presentation change); proposed once #6 is settled, texts in [docs/upstream-drafts/automation-api.md](docs/upstream-drafts/automation-api.md) |
-| **Bridge to the kit** | Opt-in connection of the page to a local automation client (URL parameter with its address and a token), which then drives the page through the automation API: open a project, read it back, render | **Planned** (phase 6): on a fork branch on top of the automation API, proposed after it |
+| **Bridge to the kit** | Opt-in connection of the page to a local automation client (URL parameter with its address and a token), which then drives the page through the automation API: open a project, read it back, render | **Not proposed yet**: written and tested on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/kit-bridge) (on top of the automation API), checked end to end with the kit on 2026-11-16; proposed after the API |
 
 States are updated as the work moves; the full history is in
 [docs/upstream-contributions.md](docs/upstream-contributions.md).
@@ -191,3 +191,8 @@ Studio; its editor, part catalog, CAD calibration and Auto Video generator do th
 ## License
 
 [MIT](LICENSE). Circuit Studio 3D is a separate project by its own authors, also under the MIT license.
+
+**3D models of your parts**: prepared parts, the generated project and the videos embed or show the models you
+give the kit, often STEP files from third parties (GrabCAD, vendor sites) with their own licences. You are
+responsible for the models you use and publish; the skills tell you which parts come from third-party models and
+let you choose what is committed.
