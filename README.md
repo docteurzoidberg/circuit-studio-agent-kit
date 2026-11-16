@@ -100,7 +100,7 @@ request numbers on GitHub.
 | **Base-path assets** | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) | **Open**: issue [#1](https://github.com/arslansadiq87/circuit-studio/issues/1), pull request [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) |
 | **Model references** | Built-in model references resolved from `modelId` when a project does not carry them | **Open**: issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3), pull request [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) |
 | **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); planned texts in [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md) |
-| **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds | **In progress, not proposed yet**: being written in the fork |
+| **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds | **Not proposed yet**: implemented and tested locally (fork branch `feat/automation-api`, built on the two changes above) |
 
 States are updated as the work moves; the full history is in
 [docs/upstream-contributions.md](docs/upstream-contributions.md).

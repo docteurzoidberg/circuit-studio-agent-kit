@@ -9,7 +9,7 @@ async () => {
   const { defaultVideoSettings } = await import('/src/cinematic.ts');
   const { DEVKIT_COMPONENT } = await import('/src/model.ts');
 
-  const markdown = await (await fetch(`${BASE}/reference-project/wiring.md`)).text();
+  const markdown = await (await fetch(`${BASE}/${window.__spikeWiring ?? 'reference-project/wiring.md'}`)).text();
   const PARTS_DIR = window.__spikePartsDir ?? 'parts';  // 'parts-simplified' for the simplified models
   const prepared = await (await fetch(`${BASE}/${PARTS_DIR}/parts.json`)).json();
 
@@ -30,9 +30,12 @@ async () => {
   // --- Layout is not part of the document; for the spike it is a fixed table (mm, degrees).
   const layout = {
     Board: { at: [0, 0], rot: 0 }, 'Session gauge': { at: [-40, -105], rot: 0 }, 'Week gauge': { at: [40, -105], rot: 0 },
-    Display: { at: [0, 90], rot: 180 }, Strip: { at: [-100, 80], rot: 0 }, D1: { at: [-100, 62], rot: 0 },
+    Display: { at: [0, 90], rot: 180 }, Strip: { at: [-80, 95], rot: 0 }, D1: { at: [-100, 62], rot: 0 },
     Buck: { at: [-95, -40], rot: 0 }, Fuse: { at: [-150, -35], rot: 0 }, 'Power socket': { at: [-150, -95], rot: 0 },
   };
+  // An optional Layout table in the document (Name | X | Y | Rotation) overrides the fixed table.
+  const layoutTable = tables.find(t => t.header.includes('name') && t.header.includes('x') && t.header.includes('y'));
+  for (const row of layoutTable?.rows ?? []) layout[row.name] = { at: [Number(row.x), Number(row.y)], rot: Number(row.rotation || 0) };
   const devkitLabels = Object.fromEntries(DEVKIT_COMPONENT.pins.map(p => [p.id, p]));
   const assets = {};
   const toBase64 = async url => {
@@ -95,7 +98,8 @@ async () => {
       const to = resolve(target), colorName = pick(row, 'wire', 'color', 'colour').toLowerCase();
       wires.push({ id: `wire-${wires.length + 1}`, from: { componentId: from.componentId, pinId: from.pinId },
         to: { componentId: to.componentId, pinId: to.pinId }, color: colors[colorName] ?? colorName, diameter: 1.1,
-        label: `${from.text} → ${to.text}`, curvature: 19 });
+        label: `${from.text} → ${to.text}`, curvature: 19,
+        routeMode: window.__spikeRouteMode ?? 'clean' });  // 'clean' = orthogonal lanes, as in the upstream examples
     }
   }
   const raw = { schemaVersion: 1, name: 'Reference project — real wiring', components: Object.values(components), wires,

@@ -10,3 +10,5 @@ spike/parts/
 spike/references-simplified/
 spike/parts-simplified/
 __pycache__/
+# Generated Circuit Studio projects embed 3D models derived from third-party STEP files: kept local
+examples/**/*.c3dproj
