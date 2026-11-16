@@ -2,22 +2,23 @@
 
 > **Not published yet.** Fork branch
 > [`feat/automation-api`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (one commit,
-> `8f4db3d`, on top of the presentation commit `6e4d7f2` proposed in #6; 6 files, 120 lines, 5 tests).
+> `8f4db3d` and two local `fixup!` commits, on top of the presentation commit `6e4d7f2` proposed in #6; 7 tests).
 >
 > **Before publishing:**
 >
 > 1. Wait for #6 to be settled, then rebase on what lands: if the maintainer merges #6, rebase on `main`; if he
 >    implements the presentation block his own way, adapt `resolveVideoSettings()` to his block (or drop that
 >    part if there is none).
-> 2. Squash the local `fixup!` commit `65a135c` into the API commit (projectFiles loaded on demand, found by the
->    end-to-end check below), then push the fork branch.
+> 2. Squash the local `fixup!` commits into the API commit (`65a135c`: projectFiles loaded on demand, found by the
+>    end-to-end check below; `1ba2a91`: `planRoutes()`, added on 2026-11-16 for the kit's project builder), then
+>    push the fork branch.
 > 3. Fill in the issue and pull request numbers.
 >
 > **End-to-end check done on 2026-11-16** (fork `8f4db3d` + `65a135c`, `npm run build && npx vite preview`, Chrome
 > driven through the DevTools protocol, fresh profile): see the verification section of the pull request. It also
-> showed a probable upstream bug when opening the repository's own fixture, listed as bug 6 in
-> [../upstream-bugs.md](../upstream-bugs.md); the check worked around it by completing the fixture's part geometry
-> from the parts bin.
+> showed a bug when opening the repository's own fixture (bug 6 in [../upstream-bugs.md](../upstream-bugs.md),
+> since proposed as #7); the check worked around it by completing the fixture's part geometry from the parts bin.
+> `planRoutes()` was checked the same way afterwards (fork `1ba2a91`).
 >
 > Issue and pull request are published together, as for #5 and #6: the maintainer merges or implements his way.
 
@@ -36,12 +37,13 @@ So today a script cannot, on the hosted site or a `vite preview` build:
 
 - open a project file and know when its wire routes and models are ready;
 - list the available parts and their pins (to map a wiring list to pin IDs);
-- render a PNG of the current view or an Auto Video export, and get the file back instead of a download.
+- render a PNG of the current view or an Auto Video export, and get the file back instead of a download;
+- check a generated layout: whether every wire finds a route, before opening the project.
 
 Expected: a small, documented and versioned object, for example `window.circuitStudio`, that wraps what the
 interface already does, in development and production builds.
 
-A change is proposed in the linked pull request (one commit, 5 tests, a `docs/AUTOMATION_API.md` page with a
+A change is proposed in the linked pull request (one commit, 7 tests, a `docs/AUTOMATION_API.md` page with a
 Playwright example). It builds on #6 (the project's stored video settings); I will rebase it on whatever lands
 there. Feel free to merge it, or to implement this your own way as you did for #1 and #3, whichever suits you.
 
@@ -60,6 +62,9 @@ What a stable API changes for such tools:
 - **The catalog without the sources.** `listParts()` gives the built-in parts and their pins from the app itself.
   Without it, my kit reads `src/model.ts` and `src/store.ts` from a checkout or a download of this repository and
   compiles them with esbuild; any refactor here breaks that.
+- **Layouts that route.** `planRoutes()` runs the workspace's route planner on a project without opening it, so
+  a tool that places parts can check that no wire is blocked, and move parts until none is, with the planner
+  the app will use.
 - **Reproducible renders.** `renderVideo()` uses the defaults, then the project's stored settings (#6), then the
   caller's: never the browser's local preset, so the same project renders the same way on any machine.
 - **A contract you control.** The API is versioned (`version: 1`) and documented; internals stay free to change.
@@ -93,28 +98,34 @@ the raw scene.
 - `renderImage({width, height, transparent})`: a PNG of the current view;
 - `renderVideo(settings?, {selected, onProgress, signal})`: the Auto Video export in memory (`blob`, `filename`,
   `mimeType`, `frames`, `duration`, `warnings`). Settings are the defaults, then the project's stored settings
-  (#6), then the given ones; the local preset is not used, so renders are reproducible.
+  (#6), then the given ones; the local preset is not used, so renders are reproducible;
+- `planRoutes(data?)`: the wire routes of a project (object or JSON text; the current project when omitted),
+  computed by the workspace's planner in the routing worker, without opening the project or loading models:
+  each wire's `blocked` flag and route `points`, and the list of blocked wires.
 
 Changes:
 
-- `src/automation.ts` (new): the API, `listAutomationParts()`, `resolveVideoSettings()`; it loads `projectFiles` on
-  demand, as the app does.
+- `src/automation.ts` (new): the API, `listAutomationParts()`, `resolveVideoSettings()`, `planProjectRoutes()`; it
+  loads `projectFiles` on demand, as the app does.
 - `src/main.tsx`: installs the API.
 - `src/Workspace.tsx`: `renderScenePng()` split out of `exportScenePng()` (which still downloads), and
   `wireRoutesReady()` so scripts can wait for the routing worker.
 - `docs/AUTOMATION_API.md` (new), linked from the README: reference and a Playwright example.
-- `tests/automation-api.test.ts`: 5 tests (version, built-in parts with pins, settings from defaults, from the
-  project then overrides, sanitized overrides).
+- `tests/automation-api.test.ts`: 7 tests (version, built-in parts with pins, settings from defaults, from the
+  project then overrides, sanitized overrides, routes of the fixture, a blocked wire).
 
 Verification:
 
-- `npx tsc -b` passes; the 5 new tests pass; `npx vitest run` shows the same 35 unrelated failures as on `main`.
+- `npx tsc -b` passes; the 7 new tests pass; `npx vitest run` shows the same 35 unrelated failures as on `main`.
 - End to end on a production build (`npm run build && npx vite preview`), driven from outside through the Chrome
   DevTools protocol in a fresh profile, with `tests/fixtures/crowded-c6-project.json` (8 parts, 28 wires):
   `openProject` accepts the object, its JSON text and a `Blob`, and resolves once the models and the 28 routes
   are in place (10 s); `listParts()` returns the 12 built-in parts with their pins; `capabilities()` reports MP4,
   WebM and PNG; `renderImage()` returns a PNG; `renderVideo({mode: 'orbit', fps: 24})` returns an MP4 checked
   with `ffprobe`: H.264, 1920 × 1080, 24 fps, 90 frames, 3.75 s, every model and wire visible.
+- `planRoutes()` on the same build: the fixture's 28 wires all routed with their points (10.4 s, in the worker);
+  a large part laid over a wire's source part makes that wire `blocked` (38 ms); without argument it plans the
+  current project; an invalid project is rejected with the schema error; the current project is left unchanged.
 - `npm run build` adds no warning (a static import of `projectFiles` was made dynamic for that).
 
 Reproduce locally (Node 22):
