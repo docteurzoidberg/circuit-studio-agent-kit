@@ -13,6 +13,7 @@
   "quality": "detailed",
   "modelFormat": "glb",
   "category": "module",
+  "modelAssetId": "test-board",
   "modelCenter": [
    0.0,
    0.0,

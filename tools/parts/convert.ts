@@ -2,13 +2,13 @@
 // Port of tools/c3dparts/convert.py.
 //
 // The GLB keeps the STEP coordinates (mm, Z up). The part tells Circuit Studio how to place it: `modelCenter`
-// (bounding-box centre of the kept solids), `modelOrientation` (Euler XYZ, radians) and `dimensions` measured after
-// rotation. Pin positions and exit directions are expressed in that centred, rotated frame.
+// (bounding-box centre of the GLB), `modelOrientation` (Euler XYZ, radians) and `dimensions` measured on the GLB
+// after rotation. Pin positions and exit directions are expressed in that centred, rotated frame.
 import {createHash} from 'node:crypto';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {basename} from 'node:path';
 import type {Handle_TDocStd_Document} from 'opencascade.js/dist/opencascade.full.js';
-import {compound, enumValue, quantityColour, solidBox, unionBox, volume, type OC, type Shape} from './occt.ts';
+import {compound, enumValue, quantityColour, solidBox, volume, type OC, type Shape} from './occt.ts';
 import type {Spec, Vector} from './spec.ts';
 import {readStep, type Solid} from './step.ts';
 
@@ -39,6 +39,8 @@ export interface Part {
   asset: string;
   geometry: {
     kind: 'model'; quality: 'detailed'; modelFormat: 'glb'; category: string;
+    /** The library part's id: Circuit Studio loads a custom part's model through it (modelCache.ts). */
+    modelAssetId: string;
     modelCenter: number[]; modelOrientation: number[]; origin: number[];
     calibrated: boolean; verified: boolean; sourceFilename: string; sourceSha256: string;
   } & GlbStats;
@@ -157,6 +159,66 @@ export function glbStats(glb: Buffer): GlbStats {
   return {meshCount: meshes.length, materialCount: (gltf.materials ?? []).length, triangleCount: triangles};
 }
 
+type Matrix = number[];  // 4 x 4, column-major, as glTF stores it
+
+const IDENTITY: Matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+function multiply(a: Matrix, b: Matrix): Matrix {
+  const out = new Array<number>(16).fill(0);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) out[c * 4 + r] += a[k * 4 + r] * b[c * 4 + k];
+  return out;
+}
+
+/** Matrix of a glTF node: its `matrix`, or translation × rotation (quaternion) × scale. */
+function nodeMatrix(node: {matrix?: number[]; translation?: number[]; rotation?: number[]; scale?: number[]}): Matrix {
+  if (node.matrix) return node.matrix;
+  const [x, y, z, w] = node.rotation ?? [0, 0, 0, 1];
+  const [sx, sy, sz] = node.scale ?? [1, 1, 1];
+  const [tx, ty, tz] = node.translation ?? [0, 0, 0];
+  return [
+    (1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0,
+    2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0,
+    2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0,
+    tx, ty, tz, 1,
+  ];
+}
+
+const transform = (m: Matrix, [x, y, z]: number[]): number[] =>
+  [0, 1, 2].map(r => m[r] * x + m[4 + r] * y + m[8 + r] * z + m[12 + r]);
+
+/**
+ * Corners of every mesh primitive's box (POSITION min/max), placed by the node transforms, in GLB coordinates.
+ * Circuit Studio measures a part the same way (three.js `Box3.setFromObject`) and rejects a calibrated part whose
+ * measured size differs from its `dimensions` by more than 0.15 mm: the boxes of the exact geometry are larger
+ * than the mesh on curved faces (threads, rounds), so the part is measured on what is written.
+ */
+export function glbCorners(glb: Buffer): number[][] {
+  type Node = {matrix?: number[]; translation?: number[]; rotation?: number[]; scale?: number[]; mesh?: number; children?: number[]};
+  const gltf = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8')) as {
+    scene?: number; scenes: {nodes: number[]}[]; nodes: Node[];
+    meshes: {primitives: {attributes: {POSITION: number}}[]}[]; accessors: {min?: number[]; max?: number[]}[];
+  };
+  const corners: number[][] = [];
+  const visit = (index: number, parent: Matrix) => {
+    const node = gltf.nodes[index];
+    const world = multiply(parent, nodeMatrix(node));
+    for (const primitive of node.mesh === undefined ? [] : gltf.meshes[node.mesh].primitives) {
+      const {min, max} = gltf.accessors[primitive.attributes.POSITION];
+      if (!min || !max) throw new Error('GLB: POSITION accessor without min/max');
+      for (const x of [min[0], max[0]]) for (const y of [min[1], max[1]]) for (const z of [min[2], max[2]]) {
+        corners.push(transform(world, [x, y, z]));
+      }
+    }
+    for (const child of node.children ?? []) visit(child, world);
+  };
+  for (const root of gltf.scenes[gltf.scene ?? 0].nodes) visit(root, IDENTITY);
+  if (!corners.length) throw new Error('GLB: no mesh');
+  return corners;
+}
+
+const extent = (points: number[][], i: number): [number, number] =>
+  [Math.min(...points.map(p => p[i])), Math.max(...points.map(p => p[i]))];
+
 /** Run the pipeline on a loaded spec. */
 export async function convert(spec: Spec): Promise<Conversion> {
   const model = await readStep(spec.step);
@@ -180,14 +242,12 @@ export async function convert(spec: Spec): Promise<Conversion> {
   const doc = bodiesDocument(oc, spec.id, bodies);
   const glb = writeGlb(oc, doc, bodies.map(b => b.shape), spec.meshLinear, spec.meshAngular);
 
-  const b = unionBox(kept.map(s => solidBox(oc, s)));
-  const centre = b.min.map((v, i) => (v + b.max[i]) / 2);
+  // Centre and size measured on the GLB, as Circuit Studio measures it (glbCorners).
+  const glbBox = glbCorners(glb);
+  const centre = [0, 1, 2].map(i => extent(glbBox, i)).map(([lo, hi]) => (lo + hi) / 2);
   const euler = spec.orientation.map(a => (a * Math.PI) / 180);
-  const corners: number[][] = [];
-  for (const x of [b.min[0], b.max[0]]) for (const y of [b.min[1], b.max[1]]) for (const z of [b.min[2], b.max[2]]) {
-    corners.push(rotate([x - centre[0], y - centre[1], z - centre[2]], euler));
-  }
-  const dims = [0, 1, 2].map(i => round(Math.max(...corners.map(c => c[i])) - Math.min(...corners.map(c => c[i])), 4));
+  const rotated = glbBox.map(c => rotate(c.map((v, i) => v - centre[i]), euler));
+  const dims = [0, 1, 2].map(i => extent(rotated, i)).map(([lo, hi]) => round(hi - lo, 4));
 
   const pins = spec.pins.map((p, index): PartPin => {
     const exitDirection = rotate(p.exit, euler);
@@ -203,7 +263,7 @@ export async function convert(spec: Spec): Promise<Conversion> {
     id: spec.id, name: spec.name, category: spec.category, dimensions: dims, format: 'glb',
     asset: glb.toString('base64'),
     geometry: {
-      kind: 'model', quality: 'detailed', modelFormat: 'glb', category: spec.category,
+      kind: 'model', quality: 'detailed', modelFormat: 'glb', category: spec.category, modelAssetId: spec.id,
       modelCenter: centre.map(v => round(v, 4)), modelOrientation: euler.map(a => round(a, 5)), origin: [0, 0, 0],
       calibrated: true, verified: false, sourceFilename: basename(spec.step),
       sourceSha256: createHash('sha256').update(readFileSync(spec.step)).digest('hex'), ...stats,

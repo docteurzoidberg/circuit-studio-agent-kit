@@ -62,7 +62,11 @@ flowchart LR
 ```
 
 - GLB keeps STEP axes in millimetres; the part definition carries `modelCenter` (bounding-box centre),
-  `modelOrientation` and calibrated `dimensions` (Circuit Studio checks them within 0.15 mm).
+  `modelOrientation` and calibrated `dimensions` (Circuit Studio checks them within 0.15 mm), all measured on the
+  written GLB as Circuit Studio measures it: the exact geometry's boxes are larger than the mesh on curved faces
+  (up to 0.23 mm on the Claudemètre's threads and lugs, enough for Circuit Studio to reject the part).
+- `geometry.modelAssetId` is the part's id: Circuit Studio loads a custom part's model through it (found when the
+  first converted parts were imported, 2026-11-16).
 - Pins are converted to the centred, rotated part frame, with `exitDirection` rotated the same way.
 - Output follows upstream `LibraryPartSchema` (`{ format: "c3d-component", version: 1, part }`, model as base64).
 - Preview: a PNG of the part with its pins and labels, for the user to check before use.

@@ -1,8 +1,8 @@
 """`part convert`: STEP + part spec → Circuit Studio part (.c3dcomponent), deterministic, nothing guessed.
 
 The GLB keeps the STEP coordinates (mm, Z up). The part tells Circuit Studio how to place it: `modelCenter`
-(bounding-box centre of the kept solids), `modelOrientation` (Euler XYZ, radians) and `dimensions` measured after
-rotation. Pin positions and exit directions are expressed in that centred, rotated frame.
+(bounding-box centre of the GLB), `modelOrientation` (Euler XYZ, radians) and `dimensions` measured on the GLB
+after rotation. Pin positions and exit directions are expressed in that centred, rotated frame.
 """
 import base64
 import hashlib
@@ -92,6 +92,53 @@ def glb_stats(data):
             'triangleCount': triangles}
 
 
+def _node_matrix(node):
+    """Matrix of a glTF node (4 x 4, column-major): its `matrix`, or translation x rotation x scale."""
+    if 'matrix' in node:
+        return node['matrix']
+    x, y, z, w = node.get('rotation', [0, 0, 0, 1])
+    sx, sy, sz = node.get('scale', [1, 1, 1])
+    tx, ty, tz = node.get('translation', [0, 0, 0])
+    return [(1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0,
+            2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0,
+            2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0,
+            tx, ty, tz, 1]
+
+
+def _multiply(a, b):
+    return [sum(a[k * 4 + r] * b[c * 4 + k] for k in range(4)) for c in range(4) for r in range(4)]
+
+
+def glb_corners(glb):
+    """Corners of every mesh primitive's box (POSITION min/max), placed by the node transforms.
+
+    Circuit Studio measures a part this way (three.js Box3.setFromObject) and rejects a calibrated part whose size
+    differs from its `dimensions` by more than 0.15 mm; boxes of the exact geometry are larger than the mesh on
+    curved faces, so the part is measured on what is written.
+    """
+    length = struct.unpack_from('<I', glb, 12)[0]
+    gltf = json.loads(glb[20:20 + length])
+    corners = []
+
+    def visit(index, parent):
+        node = gltf['nodes'][index]
+        world = _multiply(parent, _node_matrix(node))
+        for primitive in gltf['meshes'][node['mesh']]['primitives'] if 'mesh' in node else []:
+            accessor = gltf['accessors'][primitive['attributes']['POSITION']]
+            lo, hi = accessor['min'], accessor['max']
+            for x in (lo[0], hi[0]):
+                for y in (lo[1], hi[1]):
+                    for z in (lo[2], hi[2]):
+                        corners.append([world[r] * x + world[4 + r] * y + world[8 + r] * z + world[12 + r]
+                                        for r in range(3)])
+        for child in node.get('children', []):
+            visit(child, world)
+
+    for root in gltf['scenes'][gltf.get('scene', 0)]['nodes']:
+        visit(root, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
+    return corners
+
+
 def convert(spec):
     """Run the pipeline; return (part dict as in LibraryPartSchema, report dict, kept solids with colours)."""
     model = read_step(spec.step)
@@ -117,11 +164,10 @@ def convert(spec):
         write_glb(doc, [compound], glb_path, spec.mesh_linear, spec.mesh_angular)
         glb = glb_path.read_bytes()
 
-    b = cq.Compound.makeCompound([s.shape for s in kept]).BoundingBox()
-    centre = [(b.xmin + b.xmax) / 2, (b.ymin + b.ymax) / 2, (b.zmin + b.zmax) / 2]
+    box = glb_corners(glb)  # measured on the GLB, as Circuit Studio measures it
+    centre = [(min(c[i] for c in box) + max(c[i] for c in box)) / 2 for i in range(3)]
     euler = [math.radians(a) for a in spec.orientation]
-    corners = [rotate([x - centre[0], y - centre[1], z - centre[2]], euler)
-               for x in (b.xmin, b.xmax) for y in (b.ymin, b.ymax) for z in (b.zmin, b.zmax)]
+    corners = [rotate([c[i] - centre[i] for i in range(3)], euler) for c in box]
     dims = [round(max(c[i] for c in corners) - min(c[i] for c in corners), 4) for i in range(3)]
 
     pins = []
@@ -139,7 +185,7 @@ def convert(spec):
         'id': spec.id, 'name': spec.name, 'category': spec.category, 'dimensions': dims, 'format': 'glb',
         'asset': base64.b64encode(glb).decode('ascii'),
         'geometry': {'kind': 'model', 'quality': 'detailed', 'modelFormat': 'glb', 'category': spec.category,
-                     'modelCenter': [round(v, 4) + 0.0 for v in centre],
+                     'modelAssetId': spec.id, 'modelCenter': [round(v, 4) + 0.0 for v in centre],
                      'modelOrientation': [round(a, 5) + 0.0 for a in euler], 'origin': [0, 0, 0],
                      'calibrated': True, 'verified': False, 'sourceFilename': spec.step.name,
                      'sourceSha256': hashlib.sha256(spec.step.read_bytes()).hexdigest(), **stats},
