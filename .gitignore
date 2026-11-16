@@ -1,0 +1,12 @@
+node_modules/
+.env
+*.local
+out/
+.cache/
+circuit-studio/
+spike/output/
+.venv-cad/
+spike/parts/
+spike/references-simplified/
+spike/parts-simplified/
+__pycache__/
