@@ -4,7 +4,8 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {after, before, describe, test} from 'node:test';
 import {WebSocket} from 'ws';
-import {KitServer} from '../mcp/server.ts';
+import {main} from '../cli.ts';
+import {Studio} from '../studio/studio.ts';
 import type {CsProject} from '../project/engine.ts';
 import {Bridge, CLOSE_REJECTED, CLOSE_REPLACED, findBuild} from './bridge.ts';
 import {applyEdits, changes, snapshot} from './edits.ts';
@@ -125,28 +126,53 @@ describe('bridge', () => {
   });
 });
 
-describe('MCP tools of the review', () => {
-  test('open the project in the page, then save the user\'s edits into the file', async () => {
-    const root = join(temp, 'project');
+describe('studio', () => {
+  const root = join(temp, 'project');
+  const file = join(root, '.circuitstudio', 'project.c3dproj');
+  before(() => {
     mkdirSync(join(root, '.circuitstudio'), {recursive: true});
-    const file = join(root, '.circuitstudio', 'project.c3dproj');
     writeFileSync(file, JSON.stringify(project()));
-    const kit = new KitServer(root, () => {});
+  });
+
+  test('opens the project in the page, then saves the user\'s edits into the file', async () => {
+    const studio = await Studio.start(root, {from: join(temp, 'circuit-studio')});
     try {
-      assert.match(kit.status(), /No Circuit Studio configured/);
-      const bridge = (await kit.ensureBridge({from: join(temp, 'circuit-studio')}))!;
-      assert.match(await kit.open({openBrowser: false, waitSeconds: 0.2}), /No Circuit Studio page connected[\s\S]*#bridge=/);
-      const fake = await page(bridge);
-      assert.match(await kit.open({openBrowser: false}), /2 parts, 1 wires/);
-      assert.match(await kit.sync(), /No edit/);
+      assert.match(await studio.open({browser: false, wait: 0.2}), /No Circuit Studio page connected[\s\S]*#bridge=/);
+      const fake = await page(studio.bridge);
+      assert.match(await studio.open({browser: false}), /2 parts, 1 wires/);
+      assert.match(await studio.sync(), /No edit/);
       fake.edit(p => { p.components[0].position = [-30, 10, 0]; p.components[0].rotation = [0, 0, 180]; });
-      assert.match(await kit.sync(), /MCU x -30, y 10, 180°/);
+      assert.match(await studio.sync(), /MCU x -30, y 10, 180°/);
       const saved = JSON.parse(readFileSync(file, 'utf8')) as CsProject;
       assert.deepEqual(saved.components[0].position, [-30, 10, 0]);
       assert.deepEqual(saved.assets, {model: 'AAAA'});
-      assert.match(kit.status(), /page: connected/);
+      assert.match(studio.status(), /page: connected/);
     } finally {
-      await kit.close();
+      await studio.close();
     }
+  });
+
+  test('runs in the background and answers the other studio commands', async () => {
+    const lines: string[] = [];
+    const run = async (...args: string[]) => {
+      lines.length = 0;
+      const code = await main(['studio', ...args], {cwd: root, out: l => lines.push(l), err: l => lines.push(l)});
+      return {code, text: lines.join('\n')};
+    };
+    assert.match((await run('status')).text, /not running/);
+    assert.match((await run('sync')).text, /run studio open first/);
+    // Started by `studio open`, detached; nothing connects, so it hands back the link.
+    const opened = await run('open', '--from', join(temp, 'circuit-studio'), '--no-browser', '--wait', '0.2');
+    assert.equal(opened.code, 0, opened.text);
+    assert.match(opened.text, /No Circuit Studio page connected[\s\S]*#bridge=ws:\/\/127\.0\.0\.1:\d+\/bridge&token=/);
+    const state = JSON.parse(readFileSync(join(root, '.circuitstudio', 'studio.json'), 'utf8'));
+    assert.match((await run('status')).text, /page: not connected/);
+    // Control requests need the control token, and never come from a page.
+    assert.equal((await fetch(`http://127.0.0.1:${state.port}/__kit/status`, {method: 'POST'})).status, 403);
+    assert.equal((await fetch(`http://127.0.0.1:${state.port}/__kit/status`, {method: 'POST',
+      headers: {'x-kit-control': state.control, origin: 'https://example.com'}})).status, 403);
+    assert.match((await run('stop')).text, /stopped/);
+    for (let i = 0; i < 50 && (await run('status')).text.includes('page:'); i++) await new Promise(r => setTimeout(r, 100));
+    assert.match((await run('status')).text, /not running/);
   });
 });

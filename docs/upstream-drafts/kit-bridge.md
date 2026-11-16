@@ -13,7 +13,7 @@
 >    state it in the pull request (the end-to-end check below was on a build served from the same machine).
 > 4. Fill in the issue and pull request numbers.
 >
-> **End-to-end check done on 2026-11-16**: fork build served by the kit's MCP server on `127.0.0.1:5199`, page opened
+> **End-to-end check done on 2026-11-16**: fork build served by the kit on `127.0.0.1:5199`, page opened
 > in Windows Chrome from WSL with the link the kit gives; the page connected, the Claudemètre project (8 parts, 16
 > wires, 13 MB) was opened through the bridge, read back, and rendered to a 1280 × 720 PNG in 0.7 s.
 

@@ -1,6 +1,6 @@
 # Circuit Studio agent kit
 
-Claude Code skills, a command line and an MCP server that turn an electronics project's wiring into a 3D wiring video
+Claude Code skills and a command line that turn an electronics project's wiring into a 3D wiring video
 rendered by [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio). Start with [README.md](README.md)
 (what the kit does, state of each skill and command) and [PLAN.md](PLAN.md) (decisions D1…, architecture, phases,
 next steps).
@@ -10,11 +10,11 @@ next steps).
 | Path | Content |
 |---|---|
 | `skills/` | Skills, in the order a user meets them: `wiring-plan`, `wiring-parts` (written), `wiring-project` (written), `wiring-video` (planned) |
-| `tools/cli.ts` | The kit's command line (`part catalog`, `part inspect`, `part convert`, `part pins`, `wiring`, `build`, `mcp` so far) |
+| `tools/cli.ts` | The kit's command line (`part catalog`, `part inspect`, `part convert`, `part pins`, `wiring`, `build`, `studio` so far) |
 | `tools/catalog/` | Snapshot of the Circuit Studio catalog into the user's `.circuitstudio/catalog.json` |
 | `tools/parts/` | STEP inspection and conversion into Circuit Studio parts (OpenCascade in WebAssembly) |
 | `tools/wiring/` | Pins of the project's parts (`part pins`) and the check of `wiring.json` (`wiring`, ajv) |
-| `tools/bridge/`, `tools/mcp/` | The bridge the Circuit Studio page connects to (D23) and the MCP server holding it (`mcp`); `tools/config.ts`: the user's kit settings |
+| `tools/bridge/`, `tools/studio/` | The bridge the Circuit Studio page connects to (D23) and `studio`, the background process holding it for the review (D25); `tools/config.ts`: the user's kit settings |
 | `tools/project/` | `build`: the Circuit Studio project from `wiring.json`; Circuit Studio's schema and route planner bundled from a local checkout into `.cache/engine/` |
 | `schema/`, `examples/` | `wiring.json` schema; the Claudemètre showcase (`wiring.md`, `wiring.json`) |
 | `docs/` | Study, converter plan, upstream tracking, user guides of the skills (`docs/user-guide/skills/`) |

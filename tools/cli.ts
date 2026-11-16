@@ -7,8 +7,8 @@ import {parseArgs} from 'node:util';
 import {catalog, describe, type CatalogOptions} from './catalog/catalog.ts';
 import {convertCommand, inspectCommand, type PartOptions} from './parts/commands.ts';
 import {projectRoot} from './project.ts';
-import {startMcp} from './mcp/server.ts';
 import {build, formatBuild} from './project/build.ts';
+import {runStudio, studioCommand} from './studio/studio.ts';
 import {checkWiring, formatReport} from './wiring/check.ts';
 import {formatPins, PartLibrary} from './wiring/pins.ts';
 
@@ -34,9 +34,16 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
       back to automatic or layout placement, --dry-run writes nothing (to try placements); plans the
       routes with Circuit Studio's planner (from the catalog's checkout, or --from); exit code 1 when
       wires stay blocked
-  mcp
-      the MCP server, over stdio (the agent starts it with the session): the bridge the Circuit Studio
-      page connects to, and the tools of the review (studio_status, studio_open, studio_sync)
+  studio open [--from <circuit-studio build> | --url <circuit-studio site>] [--no-browser] [--wait <s>]
+      opens .circuitstudio/project.c3dproj in Circuit Studio for the review: starts the kit's background
+      process if needed, opens the link in the default browser when no page is connected, and loads the
+      project in the page (again after each build: it reloads); --from or --url says which Circuit Studio
+      (a build with the kit's bridge, or a site that has it), kept for next time
+  studio sync | status | stop
+      sync writes the parts the user moved and the routes they reshaped in the page into the project;
+      status tells what runs and is connected; stop ends the background process
+  studio start [--from <build> | --url <site>]
+      runs the background process in the foreground (studio open starts it by itself)
 
   planned: init, uninstall, check, render`;
 
@@ -44,11 +51,12 @@ const OPTIONS = {
   json: {type: 'boolean'}, out: {type: 'string'}, preview: {type: 'string'}, 'no-preview': {type: 'boolean'},
   from: {type: 'string'}, download: {type: 'boolean'}, ref: {type: 'string'}, force: {type: 'boolean'},
   wires: {type: 'boolean'}, reset: {type: 'string', multiple: true}, move: {type: 'string', multiple: true},
-  'dry-run': {type: 'boolean'},
+  'dry-run': {type: 'boolean'}, url: {type: 'string'}, 'no-browser': {type: 'boolean'}, wait: {type: 'string'},
   help: {type: 'boolean', short: 'h'},
 } as const;
 
-type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean; reset?: string[]; move?: string[]; 'dry-run'?: boolean};
+type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean; reset?: string[]; move?: string[];
+  'dry-run'?: boolean; url?: string; 'no-browser'?: boolean; wait?: string};
 
 /** Where the command line runs and writes (the tests give their own). */
 export interface Io {
@@ -111,9 +119,18 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
       out(options.json ? JSON.stringify(report, null, 1) : formatBuild(report));
       return report.blocked.length ? 1 : 0;
     }
-    if (command === 'mcp') {
-      if (args.length) throw new UsageError('mcp takes no argument');
-      await startMcp(cwd);
+    if (command === 'studio') {
+      const [action, ...rest] = args;
+      if (rest.length || !['start', 'open', 'sync', 'status', 'stop'].includes(action)) {
+        throw new UsageError('studio takes one of: open, sync, status, stop, start');
+      }
+      const source = {from: options.from, url: options.url};
+      if (action === 'start') await runStudio(projectRoot(cwd), source, out);
+      else {
+        const wait = options.wait === undefined ? undefined : Number(options.wait);
+        if (wait !== undefined && !(wait >= 0)) throw new UsageError('--wait takes a number of seconds');
+        out(await studioCommand(projectRoot(cwd), action, {...source, browser: !options['no-browser'], wait}));
+      }
       return 0;
     }
     if (command !== 'part') throw new UsageError(`unknown command: ${command}`);

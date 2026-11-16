@@ -58,6 +58,9 @@ export class Bridge {
   private next = 1;
   private waiting: (() => void)[] = [];
   port = 0;
+  /** Control requests (`POST /__kit/<action>`) from the kit's own commands, when set; they carry `controlToken`. */
+  control?: (action: string, body: unknown) => Promise<string> | string;
+  controlToken?: string;
 
   constructor(options: BridgeOptions) {
     if (!options.build && !options.site) throw new Error('the bridge needs a Circuit Studio build or site');
@@ -89,7 +92,32 @@ export class Bridge {
     return origin === new URL(this.options.site!).origin;
   }
 
+  /** A control request: only from the kit's commands (the token, and no browser Origin), never from a page. */
+  private async serveControl(request: IncomingMessage, response: ServerResponse, action: string) {
+    const reply = (status: number, body: object) => {
+      response.writeHead(status, {'content-type': 'application/json'});
+      response.end(JSON.stringify(body));
+    };
+    if (request.method !== 'POST' || request.headers.origin || !this.control
+      || request.headers['x-kit-control'] !== this.controlToken) {
+      reply(403, {error: 'forbidden'});
+      return;
+    }
+    let text = '';
+    for await (const chunk of request) text += chunk;
+    try {
+      reply(200, {text: await this.control(action, text ? JSON.parse(text) : {})});
+    } catch (error) {
+      reply(500, {error: (error as Error).message});
+    }
+  }
+
   private serveFile(request: IncomingMessage, response: ServerResponse) {
+    const control = new URL(request.url ?? '/', 'http://localhost').pathname.match(/^\/__kit\/([a-z]+)$/);
+    if (control) {
+      void this.serveControl(request, response, control[1]);
+      return;
+    }
     const build = this.options.build;
     if (!build) {
       response.writeHead(404).end();

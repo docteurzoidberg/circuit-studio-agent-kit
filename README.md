@@ -1,6 +1,6 @@
 # circuit-studio-agent-kit
 
-Agent skills, an MCP server and a CLI that turn an electronics project's wiring documentation into a 3D wiring
+Agent skills and a CLI that turn an electronics project's wiring documentation into a 3D wiring
 video, using [Circuit Studio 3D](https://github.com/arslansadiq87/circuit-studio) (from Tech Panda) as the rendering engine.
 
 > Status: **feasibility study done, implementation started.** The first two skills, `wiring-plan` and
@@ -41,7 +41,7 @@ flowchart LR
   PARTS --> P
   P --> JSON[Resolved wiring.json]
   JSON --> PROJ[Circuit Studio project .c3dproj]
-  PROJ --> C[wiring-video skill / MCP / CLI]
+  PROJ --> C[wiring-video skill / CLI]
   C --> OUT[MP4 + WebP + poster]
 ```
 
@@ -75,9 +75,9 @@ flowchart LR
    project, loaded in Circuit Studio, with the owner until they validate it; the owner asks for changes in words or
    moves things by hand in the editor, and a later regeneration keeps those edits.
 
-4. **Render.** The `wiring-video` skill (or the CLI, or the MCP server) renders the project into an MP4 plus a
+4. **Render.** The `wiring-video` skill (or the CLI) renders the project into an MP4 plus a
    WebP and a poster image for the README. Circuit Studio renders it in the browser: the page connects to the
-   kit's MCP server and runs its requests (open the project, read the owner's edits, render); the kit drives no
+   kit and runs its requests (open the project, read the owner's edits, render); the kit drives no
    browser. Until the author's site has the automation API, the page is a build of the fork on the owner's machine;
    without it, the owner opens the project and renders the video themselves in Circuit Studio.
 
@@ -87,9 +87,8 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 
 | Command | Step | What it does | State |
 |---|---|---|---|
-| `npx <name> init` | Setup | Installs the kit for the project or globally (it asks): skills, MCP server registration, and the way to reach Circuit Studio: a local build (review and rendering automated) or by hand | Planned |
+| `npx <name> init` | Setup | Installs the kit for the project or globally (it asks): skills, and the way to reach Circuit Studio: a local build (review and rendering automated) or by hand | Planned |
 | `npx <name> uninstall` | Setup | Removes exactly what `init` installed; the project's files stay | Planned |
-| `npx <name> mcp` | Setup | The MCP server, started by the agent with the session (registered by `init`): the bridge the Circuit Studio page connects to, and one tool per command for any agent | Written: the bridge and the review tools `studio_status`, `studio_open`, `studio_sync` ([tools/mcp/](tools/mcp/), [tools/bridge/](tools/bridge/)); the other tools planned |
 | `npx <name> check` | All | Where the project stands with the kit: steps done, step in progress, what to do next | Planned |
 | `npx <name> part catalog` | `wiring-parts` | Snapshot of the Circuit Studio catalog into `.circuitstudio/catalog.json` | Written ([tools/catalog/](tools/catalog/)); `--download` not tried yet |
 | `npx <name> part inspect <model.step>` | `wiring-parts` | What a STEP model holds: tree, colours, sizes, contact rows, complexity | Written ([tools/parts/](tools/parts/)) |
@@ -97,6 +96,7 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 | `npx <name> part pins <part id>...` | `wiring-project` | Pins of prepared or built-in parts, with the names a document may use for them | Written ([tools/wiring/](tools/wiring/)) |
 | `npx <name> wiring [--wires]` | `wiring-project` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, document unchanged since; `--wires` lists every wire as written and as resolved | Written ([tools/wiring/](tools/wiring/)) |
 | `npx <name> build` | `wiring-project` | Generates or updates `.circuitstudio/project.c3dproj`: places the parts, routes every wire with Circuit Studio's own planner, keeps the edits made in Circuit Studio | Written ([tools/project/](tools/project/)); needs a local Circuit Studio checkout for now |
+| `npx <name> studio open\|sync\|status\|stop` | `wiring-project` | The project in Circuit Studio for the review: opens the link in the browser, loads the project (again after each build), writes the owner's edits back; a background process the page connects to | Written ([tools/studio/](tools/studio/), [tools/bridge/](tools/bridge/)); needs a Circuit Studio with the kit's bridge (the fork for now) |
 | `npx <name> render` | `wiring-video` | Renders the project: MP4, WebP and poster into `.circuitstudio/media/` (`--out` to choose) | Planned |
 
 The commands follow the skills, in the order a user meets them; the skills call them, and they also work
@@ -110,7 +110,7 @@ and remote-controlling a browser, the kit lets **the Circuit Studio page connect
 
 ```mermaid
 sequenceDiagram
-  participant K as Kit (MCP server, started by the agent)
+  participant K as Kit (studio, started by the skill)
   participant P as Circuit Studio page (your browser)
   Note over K: listens on 127.0.0.1 (this machine only)
   K->>P: opens the link in your browser (once, after asking)
@@ -125,8 +125,9 @@ sequenceDiagram
 
 - **The page does the work**, through Circuit Studio's automation API, from the inside: open a project, read it
   back, render. The kit only sends requests; it drives no browser and touches no interface.
-- **One thing running**: the bridge lives in the kit's MCP server, which the agent starts with the session. You
-  only open the page (or let the kit open the link); a page left open reconnects by itself.
+- **Nothing to install or start by hand**: the bridge lives in a background process of the kit's command line
+  (`studio`), which the skill starts when the review begins. You only open the page (or let the kit open the
+  link); a page left open reconnects by itself.
 - **Safe by default**: the page connects only when its link asks for it (`#bridge=ws://127.0.0.1:<port>&token=…`),
   only to this machine, and the kit accepts only Circuit Studio's origin with its token.
 - **Which Circuit Studio**: the bridge and the automation API are proposed to Circuit Studio's author. Until he has
@@ -146,7 +147,7 @@ The skills are used in this order; each starts from what the previous one produc
 | `wiring-project` | Resolves the document into `wiring.json`, then generates the Circuit Studio project (placement, wire routes, camera) and reviews it with the owner until they validate it, keeping their manual edits from the editor | **Implemented** (first version: resolution, build and review in Circuit Studio by hand; [user guide](docs/user-guide/skills/wiring-project.md), [skills/wiring-project/](skills/wiring-project/), [schema](schema/wiring.schema.json), [example](examples/claudemetre/wiring.json)); preview images and presentation texts come with the rendering |
 | `wiring-video` | Renders the validated project into the video, WebP and poster, and helps the owner set up their own automation | **Planned** |
 
-The command line and the MCP server hold the logic the skills call (commands above). They are written in TypeScript
+The command line holds the logic the skills call (commands above). They are written in TypeScript
 (D17); the part tools were first written in Python (removed, D19), and their tests still check the outputs that
 version gave.
 
