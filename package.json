@@ -1,0 +1,18 @@
+{
+  "name": "circuit-studio-agent-kit",
+  "private": true,
+  "description": "Claude Code skills, MCP server and command line that turn an electronics project's wiring into a 3D wiring video rendered by Circuit Studio.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tools/catalog/*.test.mjs"
+  },
+  "dependencies": {
+    "esbuild": "^0.25.0",
+    "three": "^0.186.1",
+    "zod": "^4.6.7"
+  }
+}

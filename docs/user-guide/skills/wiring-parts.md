@@ -11,14 +11,15 @@ part of that document a 3D model that Circuit Studio can show, with its pins at 
 The skill never goes on the network without asking you first: before fetching the catalog, searching for a
 model online or downloading anything, it says what it will fetch and from where, and you can say no.
 
-At launch, after asking you, the skill takes a snapshot of the Circuit Studio catalog (built-in parts and their pins) into
-`.circuitstudio/catalog.json`, compares it with the parts of the wiring document and the model files found in
+At launch, the skill takes a snapshot of the Circuit Studio catalog (built-in parts and their pins) into
+`.circuitstudio/catalog.json`, from a local copy of Circuit Studio when there is one, otherwise from its author's
+repository after asking you, compares it with the parts of the wiring document and the model files found in
 your project, and lists what is missing. It then goes through the parts one by one. Prepared parts are kept in
 `.circuitstudio/parts/<id>/`; you decide whether to commit them.
 
 ```mermaid
 flowchart TD
-  W[wiring.md validated] --> SN[Ask, then snapshot the Circuit Studio<br/>catalog into .circuitstudio/catalog.json]
+  W[wiring.md validated] --> SN[Snapshot the Circuit Studio catalog<br/>local copy, or download after asking<br/>.circuitstudio/catalog.json]
   SN --> M[Compare with the document's parts<br/>and the project's model files<br/>list the missing parts]
   M --> L[For each part]
   L --> C{In the<br/>catalog?}
