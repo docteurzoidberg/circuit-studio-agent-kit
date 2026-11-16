@@ -4,7 +4,7 @@
   "title": "Claudemètre",
   "source": {
     "path": "wiring.md",
-    "sha256": "606ade10f79914edbb31ddb9b81f9926762a9e15540ca38b45d5fa404a1a4731"
+    "sha256": "8a85b8a149b8c875211c13b45d280c498d86a075dc72acc3d4b8e3f561579fe4"
   },
   "parts": [
     {
@@ -250,7 +250,7 @@
       "to": [
         {
           "part": "Display",
-          "pin": "CLK",
+          "pin": "P1",
           "text": "Display CLK"
         }
       ],
@@ -266,7 +266,7 @@
       "to": [
         {
           "part": "Display",
-          "pin": "DIO",
+          "pin": "P2",
           "text": "Display DIO"
         }
       ],
@@ -282,7 +282,7 @@
       "to": [
         {
           "part": "Display",
-          "pin": "VCC",
+          "pin": "P3",
           "text": "Display VCC"
         }
       ],
@@ -299,7 +299,7 @@
       "to": [
         {
           "part": "Display",
-          "pin": "GND",
+          "pin": "P4",
           "text": "Display GND"
         }
       ],

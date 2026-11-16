@@ -2,9 +2,9 @@
 
 <!--
 Showcase example of a wiring document as the `wiring-plan` skill writes it (template: skills/wiring-plan/
-template.md). It describes the finished build; the project's own documents lag behind it. It is resolved into
-wiring.json, the input of the next steps: `wiring-parts` prepares the 3D parts, and `wiring-video` builds the
-Circuit Studio project (claudemetre.c3dproj) and renders the video. Only "Parts" and "Connections" are required.
+template.md). It describes the finished build; the project's own documents lag behind it. `wiring-parts`
+prepares its 3D parts, `wiring-project` resolves it into wiring.json (next to it) and builds the Circuit Studio
+project (claudemetre.c3dproj), and `wiring-video` renders the video. Only "Parts" and "Connections" are required.
 -->
 
 Wiring of the [Claudemètre](https://github.com/docteurzoidberg/claudemetre), a desk gauge that shows Claude

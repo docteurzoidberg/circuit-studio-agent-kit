@@ -6,9 +6,9 @@ description: Give every part of a validated wiring document (wiring.md) a 3D par
 # wiring-parts
 
 Second step of a wiring video: `wiring-plan` wrote and validated the wiring document; this skill gives each of
-its parts a 3D part that Circuit Studio can show, with its pins named as the document names them. Then the
-document is resolved into `wiring.json` ([../wiring-plan/resolve.md](../wiring-plan/resolve.md)),
-`wiring-project` builds the Circuit Studio project and `wiring-video` renders it.
+its parts a 3D part that Circuit Studio can show, with its pins named as the document names them. Then
+`wiring-project` resolves the document into `wiring.json` and builds the Circuit Studio project, and
+`wiring-video` renders it.
 
 **What matters at this step**: each part's pins (where they are, what they are called) and its pose (which way
 up it stands: flat on its back, standing with its face towards the viewer). Where the parts sit in the scene is
@@ -175,9 +175,8 @@ When every part is done, show a table: each part, how it is provided (catalog `m
   `.circuitstudio/` or `.circuitstudio/parts/` is ignored by git (`git check-ignore`): if not, it will be
   committed with the project. Ask the user whether to commit the prepared parts, and offer to add
   `.circuitstudio/parts/` to `.gitignore` if they do not want to. Never decide it for them.
-- **Next step**: resolve the document into `.circuitstudio/wiring.json`
-  ([../wiring-plan/resolve.md](../wiring-plan/resolve.md)), then `wiring-project` builds the Circuit Studio
-  project.
+- **Next step**: `wiring-project` resolves the document into `.circuitstudio/wiring.json` and builds the Circuit
+  Studio project.
 
 ## Later versions
 

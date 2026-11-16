@@ -35,12 +35,12 @@ all):
 flowchart LR
   SRC[Project sources<br/>specs, schematic, firmware] --> A[wiring-plan skill]
   A --> DOC[Wiring document .md]
-  A --> JSON[Resolved wiring.json]
   DOC --> B[wiring-parts skill]
   B --> PARTS[Parts .c3dcomponent]
-  JSON --> P[wiring-project skill]
+  DOC --> P[wiring-project skill]
   PARTS --> P
-  P --> PROJ[Circuit Studio project .c3dproj]
+  P --> JSON[Resolved wiring.json]
+  JSON --> PROJ[Circuit Studio project .c3dproj]
   PROJ --> C[wiring-video skill / MCP / CLI]
   C --> OUT[MP4 + WebP + poster]
 ```
@@ -48,9 +48,7 @@ flowchart LR
 1. **Describe the wiring.** The `wiring-plan` skill reads the project (any format), or interviews the owner
    when there is nothing to read, writes or completes a Markdown wiring document from a template, and reviews
    it with the owner until they validate it. It reports inconsistencies, for example a GPIO in the docs that
-   differs from the firmware. Once the parts are ready (step 2), it resolves the document into a `wiring.json`
-   (parts, pin identifiers, wire order, layout hints), the only input of the CLI, asking for exact pin names
-   using the pins Circuit Studio knows for each part; see [examples/claudemetre/](examples/claudemetre/).
+   differs from the firmware; see [examples/claudemetre/](examples/claudemetre/).
 
    ```markdown
    ## Parts
@@ -71,8 +69,9 @@ flowchart LR
    colours, measured pin positions, a mesh simplified only when the model is really complex, and a preview to
    check the pins.
 
-3. **Build the project.** The `wiring-project` skill generates the Circuit Studio project from `wiring.json` and
-   the parts: placement, wire routes, camera and presentation texts. It shows preview images and reviews the
+3. **Build the project.** The `wiring-project` skill first resolves the document into a `wiring.json` (parts,
+   pin identifiers, wire order, layout hints), the only input of the CLI, asking the owner when a pin name is
+   ambiguous; then it generates the Circuit Studio project from `wiring.json` and the parts: placement, wire routes, camera and presentation texts. It shows preview images and reviews the
    project with the owner until they validate it; the owner can also open it in the Circuit Studio editor and
    move things by hand, and a later regeneration keeps those edits.
 
@@ -89,16 +88,17 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 | `npx <name> uninstall` | Setup | Removes exactly what `init` installed; the project's files stay | Planned |
 | `npx <name> mcp` | Setup | The MCP server, one tool per command, for any agent; registered by `init`, the agent starts and stops it itself | Planned |
 | `npx <name> check` | All | Where the project stands with the kit: steps done, step in progress, what to do next | Planned |
-| `npx <name> wiring` | `wiring-plan` | Checks `.circuitstudio/wiring.json` against its document (hash), the parts and their pins | Planned |
 | `npx <name> part catalog` | `wiring-parts` | Snapshot of the Circuit Studio catalog into `.circuitstudio/catalog.json` | Written ([tools/catalog/](tools/catalog/)); `--download` not tried yet |
 | `npx <name> part inspect <model.step>` | `wiring-parts` | What a STEP model holds: tree, colours, sizes, contact rows, complexity | Written ([tools/parts/](tools/parts/)) |
 | `npx <name> part convert <part.yaml>` | `wiring-parts` | STEP model to Circuit Studio part (`.c3dcomponent` and a preview), next to the spec | Written ([tools/parts/](tools/parts/)) |
+| `npx <name> part pins <part id>...` | `wiring-project` | Pins of prepared or built-in parts, with the names a document may use for them | Written ([tools/wiring/](tools/wiring/)) |
+| `npx <name> wiring [--wires]` | `wiring-project` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, document unchanged since; `--wires` lists every wire as written and as resolved | Written ([tools/wiring/](tools/wiring/)) |
 | `npx <name> build` | `wiring-project` | Generates or updates `.circuitstudio/project.c3dproj`, keeping manual edits | Planned |
 | `npx <name> render` | `wiring-video` | Renders the project: MP4, WebP and poster into `.circuitstudio/media/` (`--out` to choose) | Planned |
 
 The commands follow the skills, in the order a user meets them; the skills call them, and they also work
 without Claude (hooks, CI). Every command works on the project's `.circuitstudio/` folder, found from the current
-folder upwards (as git finds `.git/`), and needs no file name, except `part inspect` and `part convert`.
+folder upwards (as git finds `.git/`), and needs no file name, except `part inspect` and `part convert` (and `part pins`, which takes part identifiers).
 
 ## Skills
 
@@ -108,8 +108,7 @@ The skills are used in this order; each starts from what the previous one produc
 |---|---|---|
 | `wiring-plan` | Writes the wiring document from the project's sources, or by interviewing the owner, and reviews it with them until they validate it | **Implemented** (first version, being refined): [user guide](docs/user-guide/skills/wiring-plan.md), [skills/wiring-plan/](skills/wiring-plan/) |
 | `wiring-parts` | Gives every part of the document a 3D model Circuit Studio can show, with its pins at the right places | **Implemented** (first version, tested on the Claudemètre: catalog parts, STEP models in the project, stand-ins): [user guide](docs/user-guide/skills/wiring-parts.md), [skills/wiring-parts/](skills/wiring-parts/); online search and modelling come next |
-| Resolution into `wiring.json` | Part of `wiring-plan`, run after the parts: resolves the document into the file the CLI renders from | **Planned**: the [schema](schema/wiring.schema.json) and an [example](examples/claudemetre/wiring.json) exist; the instructions are a [draft](skills/wiring-plan/resolve.md) |
-| `wiring-project` | Generates the Circuit Studio project (placement, wire routes, camera, presentation texts) and reviews it with the owner until they validate it, keeping their manual edits from the editor | **Planned** |
+| `wiring-project` | Resolves the document into `wiring.json`, then generates the Circuit Studio project (placement, wire routes, camera, presentation texts) and reviews it with the owner until they validate it, keeping their manual edits from the editor | **In progress**: the resolution into `wiring.json` is written and tested on the Claudemètre ([user guide](docs/user-guide/skills/wiring-project.md), [skills/wiring-project/](skills/wiring-project/), [schema](schema/wiring.schema.json), [example](examples/claudemetre/wiring.json)); building the project comes next |
 | `wiring-video` | Renders the validated project into the video, WebP and poster, and helps the owner set up their own automation | **Planned** |
 
 The command line and the MCP server hold the logic the skills call (commands above). They are written in TypeScript
@@ -163,7 +162,7 @@ wiring, as the `wiring-plan` skill writes it and describing the finished build, 
 | Document | Content |
 |---|---|
 | [PLAN.md](PLAN.md) | Goal, decisions, architecture, phases, open questions |
-| [docs/user-guide/skills/](docs/user-guide/skills/) | User guides of the skills (`wiring-plan`, `wiring-parts`) |
+| [docs/user-guide/skills/](docs/user-guide/skills/) | User guides of the skills (`wiring-plan`, `wiring-parts`, `wiring-project`) |
 | [docs/upstream-study.md](docs/upstream-study.md) | How Circuit Studio works, access modes, gaps |
 | [docs/feasibility-results.md](docs/feasibility-results.md) | Test results, findings, feature decisions |
 | [docs/tool-changes-plan.md](docs/tool-changes-plan.md) | Planned upstream pull requests |

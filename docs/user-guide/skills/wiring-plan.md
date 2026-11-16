@@ -127,10 +127,8 @@ interview the user.
 Once you have validated the document, the skill proposes the next step and lists the parts it has to handle.
 The next steps are **not finished yet**:
 
-1. [`wiring-parts`](wiring-parts.md) gives every part a 3D model that Circuit Studio can show (being
-   designed).
-2. The document is resolved into `wiring.json`, the file the command line renders from, without an LLM
-   (planned; the format exists, see [schema/wiring.schema.json](../../../schema/wiring.schema.json) and
-   [examples/claudemetre/wiring.json](../../../examples/claudemetre/wiring.json)).
-3. `wiring-project` generates the Circuit Studio project and reviews it with you (planned).
-4. `wiring-video` renders the video from that project (planned).
+1. [`wiring-parts`](wiring-parts.md) gives every part a 3D model that Circuit Studio can show (first version).
+2. [`wiring-project`](wiring-project.md) resolves the document into `wiring.json`, the file the command line
+   renders from without an LLM (first version), then generates the Circuit Studio project and reviews it with
+   you (planned).
+3. `wiring-video` renders the video from that project (planned).

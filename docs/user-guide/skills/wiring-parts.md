@@ -52,8 +52,8 @@ flowchart TD
 - **You check each prepared part** on a preview image with its pins labelled, and correct it in plain words
   ("pin 1 is at the other end") until you say "ok", as with the wiring document. You can also look at them in
   Circuit Studio itself: *Parts bin*, import button next to *Create component*, then the `.c3dcomponent`.
-- **Pins get the names used in the wiring document**, as aliases when needed (`5V0` for `5V`), so the
-  document resolves cleanly into `wiring.json` afterwards. Pin positions or numbering that do not come from your
+- **Pins get the names used in the wiring document**, as aliases when needed (`5V0` for `5V`), so
+  [`wiring-project`](wiring-project.md) resolves the document cleanly into `wiring.json` afterwards. Pin positions or numbering that do not come from your
   project are marked as assumptions.
 - **Simplification only when needed**: if `part inspect` finds a model really complex (many solids or faces),
   the skill offers to simplify it (small hidden solids dropped, one body per colour), since lighter parts render

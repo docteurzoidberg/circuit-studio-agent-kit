@@ -42,6 +42,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D18 | **`wiring-parts` writes its decisions into the document** (2026-11-16): each part's choice goes back into `wiring.md` (the *Part* column: catalog `modelId`, prepared part id or `stand-in W x H x T`; a stand-in's pins; pin names a catalog part cannot answer to; a note), shown to the user and written only with their agreement, so the document stays the single source of truth. **Stand-ins have no file**: they stay declared in the document, as `wiring.json` already allows, and the project builder draws the box. Prepared parts name their pins as the document does (labels, aliases). |
 | D19 | **No Python left in the kit's tools** (2026-11-16): the Python part tools (`tools/c3dparts/`) are removed, superseding the part of D16 that kept them as the test reference. Porting them was validated (same outputs on the fixture and the Claudemètre parts), and keeping them meant making every converter change twice. Their outputs stay as the expected values of the tests (`tools/parts/test/fixtures/*.reference.json`), regenerated on purpose only when an output changes by design; the fixture STEP is written by `tools/parts/test/fixture.ts` (same `inspect` and `convert` outputs as the CadQuery one). The spike's Python scripts stay until the `render` command replaces `spike/serve.py`. |
 | D17 | **The kit is written in TypeScript** (2026-11-16), like Circuit Studio, so agents and contributors read one language across both projects. Node 22 runs the `.ts` files directly (type stripping, erasable syntax only, imports ending in `.ts`); `npm run typecheck` checks them with `tsc`; the published package will be a built bundle. |
+| D20 | **`wiring-project` resolves the document into `wiring.json`** (2026-11-16), as its first step, instead of a second run of `wiring-plan` after the parts: the user goes straight from `wiring-parts` to `wiring-project`, and every build checks that `wiring.json` still matches its document. The skill reads the Markdown (D3) and looks pins up with `part pins` (prepared parts and the catalog snapshot, no `.c3dcomponent` to read); the CLI `wiring` checks the result with ajv against the schema, then parts, pins and the document's hash. Answers to ambiguities go into `wiring.md`, so a new resolution gives the same file. |
 
 ## Architecture
 
@@ -71,8 +72,8 @@ npx <name> init           # install the kit (project or global): skills, MCP ser
 npx <name> uninstall      # remove what init installed, keep the project's files
 npx <name> mcp            # MCP server entry point (stdio): the agent starts and stops it
 npx <name> check          # where the project stands with the kit, and the next step to take
-npx <name> wiring         # wiring-plan: check .circuitstudio/wiring.json against its document and the parts
-npx <name> part <command> # wiring-parts: catalog, inspect <model.step>, convert <part.yaml>
+npx <name> part <command> # wiring-parts: catalog, inspect <model.step>, convert <part.yaml>; pins <part id>...
+npx <name> wiring         # wiring-project: check .circuitstudio/wiring.json against its document and the parts
 npx <name> build          # wiring-project: generate or update .circuitstudio/project.c3dproj
 npx <name> render         # wiring-video: MP4 + WebP + poster -> .circuitstudio/media/ (--out to choose)
 ```
@@ -95,15 +96,15 @@ project's own files (wiring documents, `wiring.json`, parts, rendered videos) ar
 
 | Skill | Role |
 |---|---|
-| `wiring-plan` | Reads the project's sources (any format) and writes or completes the wiring document from the provided template. Reports inconsistencies, e.g. a GPIO in the docs that differs from the firmware. Asks for the exact terminal when several are equivalent (GND, 3V3, 5V) and can suggest the nearest one. Writes pins as the project's sources name them; Circuit Studio pin identifiers are only needed later, when the document is resolved into `wiring.json` after the parts. Interviews a user who starts from nothing. Reviews the document with the user until they validate it. |
+| `wiring-plan` | Reads the project's sources (any format) and writes or completes the wiring document from the provided template. Reports inconsistencies, e.g. a GPIO in the docs that differs from the firmware. Asks for the exact terminal when several are equivalent (GND, 3V3, 5V) and can suggest the nearest one. Writes pins as the project's sources name them; Circuit Studio pin identifiers are only needed later, when `wiring-project` resolves the document into `wiring.json` (D20). Interviews a user who starts from nothing. Reviews the document with the user until they validate it. |
 | `wiring-parts` | For each part missing from the Circuit Studio catalog (the user's own model first, otherwise created), runs the part converter (D11). Sources, in order: a STEP already in the project, an online search, modelling from technical drawings with the CAD tools found on the machine (Fusion, FreeCAD, CadQuery, Blender…), or a procedural board with headers as a fallback. Offers to simplify a model only when it is really complex (many solids, a heavy mesh, as reported by `part inspect`); otherwise uses it as it is. Restores colours by rules when a STEP has none, places the pin anchors and checks them with a render. |
-| `wiring-project` | Generates the Circuit Studio project from `wiring.json` and the parts (CLI `build`): placement, wire routes, camera and presentation texts. Shows preview images and reports blocked routes or overlapping parts. Reviews the project with the user until they validate it: they ask for changes in plain language or edit the project in the Circuit Studio editor; a regeneration keeps their manual edits. |
+| `wiring-project` | First resolves the document into `wiring.json` (D20: `part pins`, then the CLI `wiring` checks it), then generates the Circuit Studio project from `wiring.json` and the parts (CLI `build`): placement, wire routes, camera and presentation texts. Shows preview images and reports blocked routes or overlapping parts. Reviews the project with the user until they validate it: they ask for changes in plain language or edit the project in the Circuit Studio editor; a regeneration keeps their manual edits. |
 | `wiring-video` | Renders the video from the validated project (CLI `render`): preview of the animation, MP4, WebP and poster; helps the user set up their own automation. |
 
 ### MCP server
 
 Thin wrapper over the CLI, so an agent without the skills reaches the same actions; one tool per command: `check`, `wiring`, `part_catalog`, `part_inspect`,
-`part_convert`, `build_project`, `render_preview`, `render_video`. `init` registers it and the agent starts and
+`part_convert`, `part_pins`, `build_project`, `render_preview`, `render_video`. `init` registers it and the agent starts and
 stops it over stdio; a background HTTP mode with `mcp start` / `mcp stop` is an option if a user needs one.
 
 ## Wiring document format
@@ -172,10 +173,10 @@ Last update: 2026-11-16. Resume from here.
 
   | Change | State |
   |---|---|
-  | Base-path assets | Open upstream: issue #1, pull request #2 |
-  | Model references | Open upstream: issue #3, pull request #4 |
-  | Presentation in project | Fork branch `feat/presentation-in-project`, not proposed yet (draft texts ready) |
-  | Automation API | Fork branch `feat/automation-api` (built on the two above), not proposed yet (no draft texts yet) |
+  | Base-path assets | Fixed upstream by the maintainer in `1713780` (issue #1, pull request #2 closed) |
+  | Model references | Fixed upstream in `1713780` (issue #3, pull request #4 closed); follow-up pull request #7 |
+  | Presentation in project | Proposed: issue #5, pull request #6 |
+  | Automation API | Fork branch `feat/automation-api`, checked end to end, published once #6 is settled |
 
 - **Reference example**: [examples/claudemetre/wiring.md](examples/claudemetre/wiring.md), the typical document
   `wiring-plan` should write and the next skills consume (parts with model paths, connections, layout hints,
@@ -190,13 +191,18 @@ Last update: 2026-11-16. Resume from here.
    branches if `main` moved; update the README State column and docs/upstream-contributions.md.
 2. **Upstream changes**: the maintainer fixed #1 and #3 himself in `1713780` (#2 and #4 closed); Presentation in
    project proposed on 2026-11-16 as issue #5 and pull request #6 (the maintainer merges it or implements it his
-   own way). Next: the Automation API (draft texts to write), once #6 is settled, rebased on what lands.
-3. **Phase 3, document format**, in the order a user meets it: (a) `wiring-plan` writes `wiring.md` from the
-   project's sources — first version in [skills/wiring-plan/](skills/wiring-plan/) with its template, tested
-   by a fresh agent on a local copy of the Claudemètre, being refined; (b) resolution into `wiring.json` —
-   [schema/wiring.schema.json](schema/wiring.schema.json), the showcase example
-   [examples/claudemetre/](examples/claudemetre/) (finished build) and a draft (`resolve.md`), revisited after
-   the parts; (c) the CLI `wiring` (schema, part and pin cross-references, stale hash).
+   own way); the built-in model fallback (the upstream fixture still opened with unavailable models) proposed as
+   pull request #7 with a comment on #3. Next: the Automation API, ready and checked end to end
+   ([texts](docs/upstream-drafts/automation-api.md)), published once #6 is settled, rebased on what lands.
+3. **Phase 3, document format** — done: (a) `wiring-plan` writes `wiring.md` from the project's sources — first
+   version in [skills/wiring-plan/](skills/wiring-plan/) with its template, tested by a fresh agent on a local
+   copy of the Claudemètre, being refined; (b) resolution into `wiring.json`, the first step of `wiring-project`
+   (D20) — [skills/wiring-project/resolve.md](skills/wiring-project/resolve.md), the
+   [schema](schema/wiring.schema.json) and the showcase example [examples/claudemetre/](examples/claudemetre/);
+   tested on 2026-11-16 by a fresh agent on the Claudemètre copy left by the `wiring-parts` test: 8 parts and 16
+   wires resolved without a question, identical to the example (whose display pins were then renamed `P1` to `P4`,
+   the identifiers `wiring-parts` gives them); (c) the CLI `part pins` and `wiring` (schema with ajv, parts, pins
+   with a hint when a label is used, document hash; `--wires` lists every wire for review).
 4. **Phase 4, `wiring-parts`** (D14): first the `part inspect` and `part convert` command line per
    [docs/part-converter-plan.md](docs/part-converter-plan.md) — done, first in Python + CadQuery (`tools/c3dparts/`,
    removed since, D19; on the Claudemètre's MRD076A it matches the spike within 0.007 mm and flags complex models for
@@ -222,8 +228,8 @@ Last update: 2026-11-16. Resume from here.
    decisions.
 2. **Spike** — done 2026-11-16, see [docs/feasibility-results.md](docs/feasibility-results.md): hosted site
    unusable, local clone works, an automation API (F1) and video settings in the project (F2) are needed upstream.
-3. **Document format** (in progress) — Markdown template read by the skill, resolved `wiring.json` and its
-   schema, CLI `wiring`; tested on the reference project's wiring.
+3. **Document format** — done 2026-11-16: Markdown template read by the skill, resolved `wiring.json` and its
+   schema, CLI `part pins` and `wiring`; tested on the reference project's wiring.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
 5. **Project** — CLI `build` (`wiring.json` to `.c3dproj`) with automatic layout and routing, merge with manual
    edits; the `wiring-project` skill.

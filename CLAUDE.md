@@ -9,10 +9,11 @@ next steps).
 
 | Path | Content |
 |---|---|
-| `skills/` | Skills, in the order a user meets them: `wiring-plan`, `wiring-parts` (written), `wiring-project`, `wiring-video` (planned) |
-| `tools/cli.ts` | The kit's command line (`part catalog`, `part inspect`, `part convert` so far) |
+| `skills/` | Skills, in the order a user meets them: `wiring-plan`, `wiring-parts` (written), `wiring-project` (resolution into `wiring.json` written), `wiring-video` (planned) |
+| `tools/cli.ts` | The kit's command line (`part catalog`, `part inspect`, `part convert`, `part pins`, `wiring` so far) |
 | `tools/catalog/` | Snapshot of the Circuit Studio catalog into the user's `.circuitstudio/catalog.json` |
 | `tools/parts/` | STEP inspection and conversion into Circuit Studio parts (OpenCascade in WebAssembly) |
+| `tools/wiring/` | Pins of the project's parts (`part pins`) and the check of `wiring.json` (`wiring`, ajv) |
 | `schema/`, `examples/` | `wiring.json` schema; the Claudemètre showcase (`wiring.md`, `wiring.json`) |
 | `docs/` | Study, converter plan, upstream tracking, user guides of the skills (`docs/user-guide/skills/`) |
 
@@ -36,7 +37,8 @@ node tools/cli.ts part inspect tools/parts/test/fixtures/test-board.step
   snapshot, parts and the generated project live in the user's `.circuitstudio/` (D13, D14).
 - The kit never goes on the network without the user's consent (D15): `part catalog` downloads only with
   `--download`, which the skill passes after asking.
-- Commands follow the skills; all but `part inspect` and `part convert` find their files in `.circuitstudio/`.
+- Commands follow the skills; all find their files in `.circuitstudio/`, except `part inspect` and `part convert`
+  (they take a file) and `part pins` (part identifiers).
 - Part tools must keep giving the expected outputs in `tools/parts/test/fixtures/*.reference.json` (fixture STEP
   written by `tools/parts/test/fixture.ts`). Regenerate them only on purpose, when an output changes by design (D19).
 - Keep the State columns of the README (skills, commands, upstream contributions) and

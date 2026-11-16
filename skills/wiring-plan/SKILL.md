@@ -7,9 +7,8 @@ description: Write or complete the Markdown wiring document of an electronics pr
 
 Writing the wiring document is the **first step** in a project: nothing else is needed before it (no 3D parts,
 no Circuit Studio). The document is free-form Markdown written for humans and becomes the source of truth for
-the next steps (`wiring-parts` prepares the 3D parts, then the document is resolved into `wiring.json`,
-`wiring-project` builds the Circuit Studio project and `wiring-video` renders it). Template: [template.md](template.md). Resolution into `wiring.json` comes later, after the parts:
-[resolve.md](resolve.md) (draft).
+the next steps (`wiring-parts` prepares the 3D parts, `wiring-project` resolves the document into `wiring.json`
+and builds the Circuit Studio project, `wiring-video` renders it). Template: [template.md](template.md).
 
 Write the document in English unless the user asks otherwise. Talk to the user in their language.
 
