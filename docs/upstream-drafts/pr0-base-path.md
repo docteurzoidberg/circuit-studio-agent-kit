@@ -1,6 +1,8 @@
-# Draft — PR 0: bundled assets on a project-site base path
+# PR 0: bundled assets on a project-site base path
 
-Fork branch: `fix/base-path-assets` (commit `b67ea2c`, on top of upstream `47b06b3`). Not opened yet.
+Fork branch: `fix/base-path-assets` (commit `b67ea2c`, on top of upstream `47b06b3`).
+Opened 2026-11-16: issue https://github.com/arslansadiq87/circuit-studio/issues/1, pull request
+https://github.com/arslansadiq87/circuit-studio/pull/2. Texts below are as sent.
 
 ## Issue
 
@@ -21,8 +23,8 @@ Steps: open the hosted site, click "ESP32-C6 Supermini" in the parts bin, check 
 
 Expected: models load from `/circuit-studio/models/...`, as they do when the app is served at `/`.
 
-I have a small fix ready (resolve these paths against `import.meta.env.BASE_URL` at request time, keeping
-saved project references unchanged) and can open a PR if that approach suits you.
+A small fix is proposed in the linked pull request: resolve these paths against `import.meta.env.BASE_URL`
+at request time, keeping saved project references unchanged. Happy to rework it if you prefer another approach.
 
 ### Context: why I am looking at this
 
@@ -64,7 +66,7 @@ them separately if useful.
 
 **Body:**
 
-Fixes #<issue>.
+Fixes #1.
 
 Bundled CAD models and the label font were requested from root-absolute paths, so a project-site deployment
 (GitHub Pages under `/circuit-studio/`) returned 404 for every model.
@@ -85,5 +87,16 @@ Verification:
   `/circuit-studio/fonts/IBMPlexMono-Regular.ttf` both return 200 and the real CAD model renders.
 - `npm run test` reports 36 failing tests, the same 36 as on `main` without this change (they assume the
   editor starts with the starter circuit); this PR does not touch them.
+
+Reproduce locally (Node 22):
+
+```bash
+npm ci
+npx tsc -b && npx vitest run tests/public-url.test.ts
+GITHUB_ACTIONS=1 GITHUB_REPOSITORY=x/circuit-studio npm run build
+GITHUB_ACTIONS=1 GITHUB_REPOSITORY=x/circuit-studio npx vite preview --port 4173
+# open http://localhost:4173/circuit-studio/, add "ESP32-C6 Supermini":
+# /circuit-studio/models/esp32-c6-supermini.glb and /circuit-studio/fonts/IBMPlexMono-Regular.ttf return 200
+```
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
