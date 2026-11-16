@@ -1,6 +1,7 @@
 # Part converter — plan
 
-Status: plan, 2026-11-16. Part of our package (PLAN.md, D11), not of Circuit Studio. Turns a STEP model into a
+Status: plan, 2026-11-16; first implementation in `tools/c3dparts/` (Python + CadQuery: `python -m c3dparts
+inspect|convert`, tests in `tools/c3dparts/tests/`). Part of our package (PLAN.md, D11), not of Circuit Studio. Turns a STEP model into a
 Circuit Studio part (`.c3dcomponent`) in one deterministic pass. Prototype: `spike/prepare_parts.py`,
 `spike/simplify_steps.py`, `spike/inspect_step.py`.
 
@@ -8,7 +9,7 @@ Circuit Studio part (`.c3dcomponent`) in one deterministic pass. Prototype: `spi
 
 ```bash
 <pkg> part inspect model.step [--json]                         # what the skill needs to find contacts
-<pkg> part convert model.step --spec part.yaml --out part.c3dcomponent [--preview part.png]
+<pkg> part convert part.yaml [--out part.c3dcomponent] [--preview part.png]   # the spec names its STEP
 ```
 
 - `inspect` lists sub-assemblies and their names, colours present in the file, solids with bounding boxes and
