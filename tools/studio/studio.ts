@@ -12,8 +12,8 @@
 // different from the page's token (which the page's link shows).
 import {randomBytes} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
-import {resolve} from 'node:path';
+import {existsSync, mkdirSync, openSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import {basename, dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Bridge, findBuild} from '../bridge/bridge.ts';
 import {applyEdits, changes, snapshot, type Placed, type Snapshot} from '../bridge/edits.ts';
@@ -110,9 +110,60 @@ export class Studio {
       : 'No edit in Circuit Studio since the project was opened.';
   }
 
+  /**
+   * Renders the video in the connected page (D26): the user's edits are saved first, the page shows the project
+   * file, and the MP4 (or WebM) goes to `.circuitstudio/media/`; a poster image only when asked.
+   */
+  async render(options: RenderOptions, progress: (line: string) => void): Promise<string> {
+    const told: string[] = [];
+    if (this.bridge.connected && this.baseline) told.push(await this.sync());
+    const opened = await this.open({browser: options.browser, wait: options.wait});
+    if (!this.bridge.connected) throw new Error(opened.replace('studio open again', 'render again'));
+    const capabilities = await this.bridge.call<{mp4: boolean; webm: boolean}>('capabilities');
+    if (!capabilities.mp4 && !capabilities.webm) {
+      throw new Error('this browser can encode neither MP4 nor WebM video (WebCodecs): try a recent Chrome or Edge');
+    }
+    let last = '';
+    const started = Date.now();
+    const result = await this.bridge.call<RenderResult>('renderVideo', [{}, {}], value => {
+      const {stage, percent} = value as {stage: string; percent: number};
+      const line = `${stage} ${Math.floor(percent / 5) * 5}%`;
+      if (line !== last) progress(`rendering: ${last = line}`);
+    });
+    const media = dirname(kitPath(this.root, 'media/video', {create: true}));
+    const name = basename(result.filename).replace(/[^\p{L}\p{N}._-]+/gu, '-') || 'wiring.mp4';
+    const video = join(media, name);
+    writeFileSync(video, Buffer.from(result.blob.$blob.base64, 'base64'));
+    told.push(`Rendered .circuitstudio/media/${name}: ${(statSync(video).size / 1e6).toFixed(1)} MB, `
+      + `${result.duration.toFixed(1)} s, ${result.frames} frames, in ${Math.round((Date.now() - started) / 1000)} s.`);
+    for (const warning of result.warnings) told.push(`warning: ${warning}`);
+    if (options.poster) {
+      const image = await this.bridge.call<{$blob: {base64: string}}>('renderImage', [{width: 1920, height: 1080}]);
+      const poster = name.replace(/\.\w+$/, '') + '.png';
+      writeFileSync(join(media, poster), Buffer.from(image.$blob.base64, 'base64'));
+      told.push(`Poster: .circuitstudio/media/${poster} (1920 × 1080, the project's camera view).`);
+    }
+    return told.filter(line => !line.startsWith('No edit')).join('\n');
+  }
+
   close(): Promise<void> {
     return this.bridge.close();
   }
+}
+
+export interface RenderOptions {
+  /** Also write a poster image (a still of the camera view), on request only (D26). */
+  poster?: boolean;
+  browser?: boolean;
+  wait?: number;
+}
+
+interface RenderResult {
+  blob: {$blob: {type: string; base64: string}};
+  filename: string;
+  frames: number;
+  duration: number;
+  warnings: string[];
 }
 
 const stateFile = (root: string) => kitPath(root, 'studio.json');
@@ -136,10 +187,11 @@ export async function runStudio(root: string, source: StudioSource, log: (line: 
   const control = randomBytes(16).toString('hex');
   let finish!: () => void;
   const finished = new Promise<void>(done => { finish = done; });
-  studio.bridge.control = async (action, body) => {
+  studio.bridge.control = async (action, body, progress) => {
     if (action === 'status') return studio.status();
     if (action === 'open') return studio.open(body as {browser?: boolean; wait?: number});
     if (action === 'sync') return studio.sync();
+    if (action === 'render') return studio.render(body as RenderOptions, progress);
     if (action === 'stop') {
       setTimeout(finish, 50);
       return 'studio stopped';
@@ -156,14 +208,25 @@ export async function runStudio(root: string, source: StudioSource, log: (line: 
   rmSync(stateFile(root), {force: true});
 }
 
-async function request(state: StudioState, action: string, body: object = {}): Promise<string> {
+async function request(state: StudioState, action: string, body: object = {}, progress: (line: string) => void = () => {}): Promise<string> {
   const response = await fetch(`http://127.0.0.1:${state.port}/__kit/${action}`, {
     method: 'POST', headers: {'content-type': 'application/json', 'x-kit-control': state.control},
     body: JSON.stringify(body),
   });
-  const answer = await response.json() as {text?: string; error?: string};
-  if (!response.ok) throw new Error(answer.error ?? `studio answered ${response.status}`);
-  return answer.text!;
+  if (!response.ok || !response.body) throw new Error(`studio answered ${response.status}`);
+  let pending = '';
+  const decoder = new TextDecoder();
+  for await (const chunk of response.body) {
+    pending += decoder.decode(chunk, {stream: true});
+    for (let at = pending.indexOf('\n'); at >= 0; at = pending.indexOf('\n')) {
+      const message = JSON.parse(pending.slice(0, at)) as {progress?: string; text?: string; error?: string};
+      pending = pending.slice(at + 1);
+      if (message.progress !== undefined) progress(message.progress);
+      else if (message.error !== undefined) throw new Error(message.error);
+      else return message.text!;
+    }
+  }
+  throw new Error('studio closed the connection without an answer');
 }
 
 /** The review process's own files never belong in git: `.circuitstudio/.gitignore` says so, once. */
@@ -193,8 +256,9 @@ async function launch(root: string, source: StudioSource): Promise<StudioState> 
   throw new Error(`studio did not start${log ? `: ${log.replace(/^error: /, '')}` : ''}`);
 }
 
-/** The `studio` commands other than `start`. */
-export async function studioCommand(root: string, action: string, options: StudioSource & {browser?: boolean; wait?: number}): Promise<string> {
+/** The `studio` commands other than `start`, and `render`. */
+export async function studioCommand(root: string, action: string,
+  options: StudioSource & RenderOptions & {browser?: boolean; wait?: number}, progress?: (line: string) => void): Promise<string> {
   let state = readState(root);
   if (action === 'stop') return state ? request(state, 'stop') : 'studio is not running';
   if (action === 'status' && !state) {
@@ -202,8 +266,8 @@ export async function studioCommand(root: string, action: string, options: Studi
     return `studio is not running. Circuit Studio: ${studio?.build ?? studio?.site ?? `none configured. ${MANUAL}`}`;
   }
   if (!state) {
-    if (action !== 'open') throw new Error('studio is not running: run studio open first');
+    if (action !== 'open' && action !== 'render') throw new Error('studio is not running: run studio open first');
     state = await launch(root, options);
   }
-  return request(state, action, {browser: options.browser, wait: options.wait});
+  return request(state, action, {browser: options.browser, wait: options.wait, poster: options.poster}, progress);
 }

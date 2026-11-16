@@ -28,6 +28,7 @@ Talk to the user in their language. Everything written to files is in English.
 | `<kit> part pins <part id>...` | Pins of prepared parts (`.circuitstudio/parts/`) and built-in parts (`.circuitstudio/catalog.json`), one line each: identifier, label, silkscreen, aliases |
 | `<kit> wiring [--wires] [--json]` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, and whether the document changed since; exit code 1 and one line per problem, with the document line. `--wires` also lists every wire as written and as resolved |
 | `<kit> studio open [--no-browser] [--wait <s>]` | Opens `.circuitstudio/project.c3dproj` in the Circuit Studio page connected to the kit (starting the kit's background process, and opening the link in the user's browser, when needed); run it again after each build to reload. Answers with the link when no page connects in time |
+| `<kit> render [--poster]` | Renders the video in the connected page (saving the user's edits and reloading the project first) into `.circuitstudio/media/`; progress lines on stderr; `--poster` also writes a still of the camera view, only when the user asks for one |
 | `<kit> studio sync` / `status` / `stop` | `sync` writes what the user moved or reshaped in the page into the project file; `status` says whether a page is connected and how the kit reaches Circuit Studio; `stop` ends the background process |
 | `<kit> build [--move "<part>=x,y[,rotation]"]... [--reset <part>]... [--dry-run] [--from <folder>] [--json]` | Generates `.circuitstudio/project.c3dproj` from `wiring.json` and the parts; places the parts, plans every route with Circuit Studio's planner, keeps the user's edits; exit code 1 when wires stay blocked. `--move` places a part as the user asks (kept like an edit), `--reset` gives a part back to build, `--dry-run` writes nothing |
 
@@ -162,5 +163,6 @@ routes, and what remains:
   decide it for them.
 - **Next step, the video**: offer to make it now. *Connected*: the page is still connected with the validated
   project, so the video can be rendered in it straight away; on yes, keep the page connected (no `studio stop`)
-  and go on with `wiring-video` (planned; until it exists, tell the user to click **Auto Video** in the open
-  page). On no, run `<kit> studio stop`. *Manual*: the user renders it with **Auto Video** in Circuit Studio.
+  and run `<kit> render` (until the `wiring-video` skill exists): the page shows the render's progress and a
+  **Cancel video** button; it takes a few minutes (about 2.5 for a 1-minute video), and the user should keep the
+  tab in front. Give its result lines (file, size, length, warnings). On no, run `<kit> studio stop`. *Manual*: the user renders it with **Auto Video** in Circuit Studio.

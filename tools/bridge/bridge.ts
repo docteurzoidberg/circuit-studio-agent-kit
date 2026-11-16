@@ -63,7 +63,7 @@ export class Bridge {
   private waiting: (() => void)[] = [];
   port = 0;
   /** Control requests (`POST /__kit/<action>`) from the kit's own commands, when set; they carry `controlToken`. */
-  control?: (action: string, body: unknown) => Promise<string> | string;
+  control?: (action: string, body: unknown, progress: (line: string) => void) => Promise<string> | string;
   controlToken?: string;
 
   constructor(options: BridgeOptions) {
@@ -109,11 +109,15 @@ export class Bridge {
     }
     let text = '';
     for await (const chunk of request) text += chunk;
+    // One JSON object per line: progress lines while it runs (a render takes minutes), then the answer or the error.
+    response.writeHead(200, {'content-type': 'application/x-ndjson'});
+    const line = (body: object) => response.write(`${JSON.stringify(body)}\n`);
     try {
-      reply(200, {text: await this.control(action, text ? JSON.parse(text) : {})});
+      line({text: await this.control(action, text ? JSON.parse(text) : {}, progress => line({progress}))});
     } catch (error) {
-      reply(500, {error: (error as Error).message});
+      line({error: (error as Error).message});
     }
+    response.end();
   }
 
   private serveFile(request: IncomingMessage, response: ServerResponse) {
@@ -166,7 +170,10 @@ export class Bridge {
 
   /** A page's connection: kept once it presents the token; it replaces an earlier page. */
   private accept(ws: WebSocket) {
-    const timeout = setTimeout(() => ws.close(CLOSE_REJECTED, 'no hello'), 5000);
+    const timeout = setTimeout(() => {
+      this.log('refused a Circuit Studio page: no hello within 5 s');
+      ws.close(CLOSE_REJECTED, 'no hello');
+    }, 5000);
     ws.once('message', data => {
       clearTimeout(timeout);
       let hello: {type?: string; token?: string; protocol?: string};
@@ -176,7 +183,10 @@ export class Bridge {
         hello = {};
       }
       if (hello.type !== 'hello' || hello.token !== this.token || hello.protocol !== PROTOCOL) {
-        ws.close(CLOSE_REJECTED, 'wrong token');
+        const why = hello.type !== 'hello' ? 'no hello' : hello.token !== this.token ? 'wrong token'
+          : `protocol ${JSON.stringify(hello.protocol)} instead of ${PROTOCOL} (a page from an older build: reload it)`;
+        this.log(`refused a Circuit Studio page: ${why}`);
+        ws.close(CLOSE_REJECTED, why.slice(0, 120));
         return;
       }
       if (this.page && this.page !== ws) this.page.close(CLOSE_REPLACED, 'another page took over');

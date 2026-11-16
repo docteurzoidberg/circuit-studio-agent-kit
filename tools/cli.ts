@@ -42,21 +42,26 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
   studio sync | status | stop
       sync writes the parts the user moved and the routes they reshaped in the page into the project;
       status tells what runs and is connected; stop ends the background process
+  render [--poster] [--no-browser] [--wait <s>]
+      renders the video in the connected Circuit Studio page (opening it first when needed): saves the
+      user's edits, reloads the project, writes the MP4 into .circuitstudio/media/; --poster also writes
+      a still of the camera view
   studio start [--from <build> | --url <site>]
       runs the background process in the foreground (studio open starts it by itself)
 
-  planned: init, uninstall, check, render`;
+  planned: init, uninstall, check`;
 
 const OPTIONS = {
   json: {type: 'boolean'}, out: {type: 'string'}, preview: {type: 'string'}, 'no-preview': {type: 'boolean'},
   from: {type: 'string'}, download: {type: 'boolean'}, ref: {type: 'string'}, force: {type: 'boolean'},
   wires: {type: 'boolean'}, reset: {type: 'string', multiple: true}, move: {type: 'string', multiple: true},
   'dry-run': {type: 'boolean'}, url: {type: 'string'}, 'no-browser': {type: 'boolean'}, wait: {type: 'string'},
+  poster: {type: 'boolean'},
   help: {type: 'boolean', short: 'h'},
 } as const;
 
 type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean; reset?: string[]; move?: string[];
-  'dry-run'?: boolean; url?: string; 'no-browser'?: boolean; wait?: string};
+  'dry-run'?: boolean; url?: string; 'no-browser'?: boolean; wait?: string; poster?: boolean};
 
 /** Where the command line runs and writes (the tests give their own). */
 export interface Io {
@@ -118,6 +123,13 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
         dryRun: options['dry-run']});
       out(options.json ? JSON.stringify(report, null, 1) : formatBuild(report));
       return report.blocked.length ? 1 : 0;
+    }
+    if (command === 'render') {
+      if (args.length) throw new UsageError('render takes no argument');
+      const wait = options.wait === undefined ? undefined : Number(options.wait);
+      out(await studioCommand(projectRoot(cwd), 'render', {from: options.from, url: options.url,
+        browser: !options['no-browser'], wait, poster: options.poster}, line => err(line)));
+      return 0;
     }
     if (command === 'studio') {
       const [action, ...rest] = args;

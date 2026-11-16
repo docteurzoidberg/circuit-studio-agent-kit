@@ -75,8 +75,9 @@ flowchart LR
    project, loaded in Circuit Studio, with the owner until they validate it; the owner asks for changes in words or
    moves things by hand in the editor, and a later regeneration keeps those edits.
 
-4. **Render.** The `wiring-video` skill (or the CLI) renders the project into an MP4 plus a
-   WebP and a poster image for the README. Circuit Studio renders it in the browser: the page connects to the
+4. **Render.** Once the owner validates the project, `wiring-project` offers to render it; on yes, the
+   `wiring-video` skill (or the CLI) renders it into an MP4, then offers a poster image or an animated WebP for
+   the README if the owner wants one. Circuit Studio renders it in the browser: the page connects to the
    kit and runs its requests (open the project, read the owner's edits, render); the kit drives no
    browser. Until the author's site has the automation API, the page is a build of the fork on the owner's machine;
    without it, the owner opens the project and renders the video themselves in Circuit Studio.
@@ -97,7 +98,7 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 | `npx <name> wiring [--wires]` | `wiring-project` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, document unchanged since; `--wires` lists every wire as written and as resolved | Written ([tools/wiring/](tools/wiring/)) |
 | `npx <name> build` | `wiring-project` | Generates or updates `.circuitstudio/project.c3dproj`: places the parts, routes every wire with Circuit Studio's own planner, keeps the edits made in Circuit Studio | Written ([tools/project/](tools/project/)); needs a local Circuit Studio checkout for now |
 | `npx <name> studio open\|sync\|status\|stop` | `wiring-project` | The project in Circuit Studio for the review: opens the link in the browser, loads the project (again after each build), writes the owner's edits back; a background process the page connects to | Written ([tools/studio/](tools/studio/), [tools/bridge/](tools/bridge/)); needs a Circuit Studio with the kit's bridge (the fork for now) |
-| `npx <name> render` | `wiring-video` | Renders the project in the connected Circuit Studio page: the MP4 into `.circuitstudio/media/`; a poster image or an animated WebP on request | Planned |
+| `npx <name> render` | `wiring-video` | Renders the project in the connected Circuit Studio page: the MP4 into `.circuitstudio/media/`, the page showing its progress; `--poster` for a still image | Written ([tools/studio/](tools/studio/)); checked on the Claudemètre (1080p, 57 s video in 144 s); the WebP and the skill are planned |
 
 The commands follow the skills, in the order a user meets them; the skills call them, and they also work
 without Claude (hooks, CI). Every command works on the project's `.circuitstudio/` folder, found from the current
@@ -145,7 +146,7 @@ The skills are used in this order; each starts from what the previous one produc
 | `wiring-plan` | Writes the wiring document from the project's sources, or by interviewing the owner, and reviews it with them until they validate it | **Implemented** (first version, being refined): [user guide](docs/user-guide/skills/wiring-plan.md), [skills/wiring-plan/](skills/wiring-plan/) |
 | `wiring-parts` | Gives every part of the document a 3D model Circuit Studio can show, with its pins at the right places | **Implemented** (first version, tested on the Claudemètre: catalog parts, STEP models in the project, stand-ins): [user guide](docs/user-guide/skills/wiring-parts.md), [skills/wiring-parts/](skills/wiring-parts/); online search and modelling come next |
 | `wiring-project` | Resolves the document into `wiring.json`, then generates the Circuit Studio project (placement, wire routes, camera) and reviews it with the owner until they validate it, keeping their manual edits from the editor | **Implemented** (first version: resolution, build and review in Circuit Studio by hand; [user guide](docs/user-guide/skills/wiring-project.md), [skills/wiring-project/](skills/wiring-project/), [schema](schema/wiring.schema.json), [example](examples/claudemetre/wiring.json)); preview images and presentation texts come with the rendering |
-| `wiring-video` | Renders the validated project into the video, right after `wiring-project` while the page is connected; then offers a poster image, an animated WebP for a README and the owner's own automation, as they need them | **Planned** |
+| `wiring-video` | Renders the validated project into the video; `wiring-project` offers it once the owner validates (on yes, the page stays connected for it); then offers a poster image, an animated WebP for a README and the owner's own automation, as they need them | **Planned** |
 
 The command line holds the logic the skills call (commands above). They are written in TypeScript
 (D17); the part tools were first written in Python (removed, D19), and their tests still check the outputs that

@@ -53,10 +53,13 @@ local tool                                            Circuit Studio page
 - **Token and origin.** The page's first message carries the token from the link; the tool closes any connection
   without the right token or from another origin. Other pages open in the browser cannot use the tool, and other
   tools cannot use the page.
+- **Renders shown in the page.** A video rendered through the API shows Circuit Studio's own progress panel,
+  whose **Cancel video** button stops it.
 - **Nothing new to call.** The requests are the automation API's methods (`openProject`, `getProject`,
   `listParts`, `capabilities`, `renderImage`, `renderVideo`, `planRoutes`, plus `ready`); a `Blob` result comes
   back as base64; `renderVideo` streams its progress and can be cancelled.
-- **Always visible.** While the bridge is on, a red-bordered badge in the header, next to the project name, says
+- **Always visible.** While the bridge is on, a badge in the header (green when connected, grey while waiting,
+  red when the link is refused), next to the project name, says
   which tool drives the page and from which address ("Driven by <tool> · 127.0.0.1:5199"), with a
   **Disconnect** button that cuts the link (and drops it from the address bar, so a reload does not reconnect).
 - **Long-lived tabs.** The page reconnects every 2 s

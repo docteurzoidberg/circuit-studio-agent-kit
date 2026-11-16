@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {after, before, describe, test} from 'node:test';
@@ -46,10 +46,13 @@ async function page(bridge: Bridge, {token = bridge.token, origin = bridge.base.
       held = JSON.parse(params[0]);
       ws.send(JSON.stringify({id, result: {name: held!.name, components: held!.components.length, wires: held!.wires.length}}));
     } else if (method === 'getProject') ws.send(JSON.stringify({id, result: {...held, assets: undefined}}));
+    else if (method === 'capabilities') ws.send(JSON.stringify({id, result: {mp4: true, webm: true, png: true}}));
     else if (method === 'renderVideo') {
-      ws.send(JSON.stringify({id, progress: {progress: 0.5}}));
-      ws.send(JSON.stringify({id, result: {frames: 2}}));
-    } else ws.send(JSON.stringify({id, error: {message: `Unknown method: ${method}`}}));
+      ws.send(JSON.stringify({id, progress: {stage: 'Rendering', frame: 1, total: 2, percent: 52}}));
+      ws.send(JSON.stringify({id, result: {blob: {$blob: {type: 'video/mp4', base64: 'AAAA'}}, filename: 'Demo wiring.mp4',
+        mimeType: 'video/mp4', frames: 2, duration: 0.07, warnings: ['a part has no model']}}));
+    } else if (method === 'renderImage') ws.send(JSON.stringify({id, result: {$blob: {type: 'image/png', base64: 'iVBO'}}}));
+    else ws.send(JSON.stringify({id, error: {message: `Unknown method: ${method}`}}));
   });
   await new Promise((resolve, reject) => {
     ws.once('open', resolve);
@@ -122,8 +125,8 @@ describe('bridge', () => {
     for (let i = 0; i < 50 && !first.welcome(); i++) await new Promise(r => setTimeout(r, 20));
     assert.deepEqual(first.welcome(), {type: 'welcome', client: 'Circuit Studio agent kit'});
     const progress: unknown[] = [];
-    assert.deepEqual(await bridge.call('renderVideo', [{}], p => progress.push(p)), {frames: 2});
-    assert.deepEqual(progress, [{progress: 0.5}]);
+    assert.equal((await bridge.call<{frames: number}>('renderVideo', [{}], p => progress.push(p))).frames, 2);
+    assert.deepEqual(progress, [{stage: 'Rendering', frame: 1, total: 2, percent: 52}]);
     await assert.rejects(bridge.call('nope'), /Unknown method: nope/);
     const second = await page(bridge);
     assert.equal(await first.closed, CLOSE_REPLACED);
@@ -156,6 +159,23 @@ describe('studio', () => {
       assert.deepEqual(saved.components[0].position, [-30, 10, 0]);
       assert.deepEqual(saved.assets, {model: 'AAAA'});
       assert.match(studio.status(), /page: connected/);
+    } finally {
+      await studio.close();
+    }
+  });
+
+  test('renders the video in the page, the poster only when asked', async () => {
+    const studio = await Studio.start(root, {from: join(temp, 'circuit-studio')});
+    try {
+      await page(studio.bridge);
+      const lines: string[] = [];
+      const told = await studio.render({browser: false}, line => lines.push(line));
+      assert.deepEqual(lines, ['rendering: Rendering 50%']);
+      assert.match(told, /^Rendered \.circuitstudio\/media\/Demo-wiring\.mp4: 0\.0 MB, 0\.1 s, 2 frames, in \d+ s\.\nwarning: a part has no model$/);
+      assert.ok(existsSync(join(root, '.circuitstudio', 'media', 'Demo-wiring.mp4')));
+      assert.ok(!existsSync(join(root, '.circuitstudio', 'media', 'Demo-wiring.png')));
+      assert.match(await studio.render({browser: false, poster: true}, () => {}), /Poster: \.circuitstudio\/media\/Demo-wiring\.png/);
+      assert.ok(existsSync(join(root, '.circuitstudio', 'media', 'Demo-wiring.png')));
     } finally {
       await studio.close();
     }
