@@ -1,7 +1,7 @@
-# PR 1 (F4): built-in model references from `modelId`
+# Model references (F4): built-in model references from `modelId`
 
 Fork branch: `fix/model-reference-from-catalog` (commit `424a03e`, on top of upstream `47b06b3`; independent of
-PR 0).
+the base-path change).
 Opened 2026-11-16: issue https://github.com/arslansadiq87/circuit-studio/issues/3, pull request
 https://github.com/arslansadiq87/circuit-studio/pull/4. Texts below are as sent.
 

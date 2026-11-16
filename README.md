@@ -91,15 +91,16 @@ Tested on a real project, the [Claudemètre](https://github.com/docteurzoidberg/
 
 ## What we would like to propose to Circuit Studio
 
-Small, focused pull requests, each discussed in an issue first. Details in
-[docs/tool-changes-plan.md](docs/tool-changes-plan.md).
+Small, focused pull requests, each discussed in an issue first, in this order. Details in
+[docs/tool-changes-plan.md](docs/tool-changes-plan.md). Numbers like #2 are Circuit Studio's own issue and pull
+request numbers on GitHub.
 
-| PR | Change | State |
+| Change | What it does | State |
 |---|---|---|
-| 0 | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) | **Open**: issue [#1](https://github.com/arslansadiq87/circuit-studio/issues/1), PR [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) |
-| 1 | Built-in model references resolved from `modelId` when a project does not carry them | **Open**: issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3), PR [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) |
-| 2 | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **In progress, not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); planned issue and PR texts in [docs/upstream-drafts/pr2-presentation.md](docs/upstream-drafts/pr2-presentation.md) |
-| 3 | A documented automation API (`window.circuitStudio`) available in production builds | **Not started** |
+| **Base-path assets** | Asset URLs that respect the Vite base path (bundled models currently 404 on GitHub Pages) | **Open**: issue [#1](https://github.com/arslansadiq87/circuit-studio/issues/1), pull request [#2](https://github.com/arslansadiq87/circuit-studio/pull/2) |
+| **Model references** | Built-in model references resolved from `modelId` when a project does not carry them | **Open**: issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3), pull request [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) |
+| **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/presentation-in-project); planned texts in [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md) |
+| **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds | **In progress, not proposed yet**: being written in the fork |
 
 States are updated as the work moves; the full history is in
 [docs/upstream-contributions.md](docs/upstream-contributions.md).

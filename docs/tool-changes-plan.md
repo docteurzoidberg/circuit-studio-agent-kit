@@ -6,9 +6,9 @@ upstream later. Each PR starts as an upstream issue. Scope decided in
 
 ```mermaid
 flowchart LR
-  B[PR 0 · hosting bugs] --> F4[PR 1 · F4 model references]
-  F4 --> F2[PR 2 · F2 presentation in project]
-  F2 --> F1[PR 3 · F1 automation API]
+  B[Base-path assets] --> F4[Model references (F4)]
+  F4 --> F2[Presentation in project (F2)]
+  F2 --> F1[Automation API (F1)]
 ```
 
 Order: smallest first, to establish contact with the maintainer; F4's registry is reused by F1.
@@ -21,7 +21,7 @@ Order: smallest first, to establish contact with the maintainer; F4's registry i
 - Backward compatible: existing `.c3dproj` / `.c3dzip` files open unchanged; no `schemaVersion` bump.
 - Docs: update the matching page under `docs/` and the README section.
 
-## PR 0 — Hosting bugs (bugs 1 and 2)
+## Base-path assets (bugs 1 and 2)
 
 **Problem.** Bundled models and the font use root-absolute URLs (`/models/...`, `/fonts/...`); on GitHub Pages
 the app lives under `/circuit-studio/`, so every CAD model returns 404 and parts fall back to placeholders.
@@ -32,7 +32,7 @@ the app lives under `/circuit-studio/`, so every CAD model returns 404 and parts
 
 **Tests.** Unit test of the helper with a non-root base; build with `GITHUB_ACTIONS=1` and check a model URL.
 
-## PR 1 — F4: model references from `modelId` (bug 6)
+## Model references (F4) from `modelId` (bug 6)
 
 **Problem.** A saved model component without `modelUrl`/`lodUrls` (e.g. the upstream fixture
 `tests/fixtures/crowded-c6-project.json`) cannot be exported: `modelResource()` throws "No model asset reference".
@@ -45,7 +45,7 @@ the app lives under `/circuit-studio/`, so every CAD model returns 404 and parts
 
 **Tests.** Export preparation of the upstream fixture no longer throws; registry covers every bundled part.
 
-## PR 2 — F2: presentation settings stored in the project
+## Presentation in project (F2)
 
 **Problem.** Video settings (`c3d-video-preset-v1`), shot overrides and saved camera scenes (keyed by project
 name in `src/savedCameraScenes.ts`) live in browser storage. A render from another browser or a script loses
@@ -63,7 +63,7 @@ used by `exportCinematic` when present.
 
 **To agree with the maintainer.** Block name, whether scenes move into the project by default.
 
-## PR 3 — F1: automation API
+## Automation API (F1)
 
 **Problem.** Scripts can only reach internal modules through the Vite dev server
 (`import('/src/videoExport.ts')`); production builds expose nothing but the raw scene.
@@ -76,7 +76,7 @@ window.circuitStudio = {
   ready: Promise<void>,                  // resolves when the viewport can render
   openProject(data: object | Blob): Promise<ProjectSummary>,  // same path as Open (migrations, validation, assets)
   getProject(): Project,                 // current project without embedded assets
-  listParts(): PartInfo[],               // built-in registry (PR 1) + local library, with pins (id, label, aliases)
+  listParts(): PartInfo[],               // built-in registry (Model references) + local library, with pins (id, label, aliases)
   capabilities(settings?): Promise<{ mp4: boolean; webm: boolean; png: boolean }>,
   renderImage(options): Promise<Blob>,   // wraps exportScenePng
   renderVideo(settings?, options?: { selected?: string[]; onProgress?(p): void; signal?: AbortSignal })
@@ -86,7 +86,7 @@ window.circuitStudio = {
 
 - `PartInfo` serves the skills' pin mapping (former F5): pins with `id`, `label`, `silkscreen`, `aliases`,
   `electrical`.
-- `renderVideo` uses the project's presentation block (PR 2) when no settings are passed.
+- `renderVideo` uses the project's presentation block (Presentation in project) when no settings are passed.
 - One `docs/AUTOMATION_API.md` page with a Playwright example (open, render, save bytes).
 
 **Tests.** Playwright against `vite preview`: open a fixture through the API, list parts, render a short PNG

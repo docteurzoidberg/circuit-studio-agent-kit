@@ -1,4 +1,4 @@
-# PR 0: bundled assets on a project-site base path
+# Base-path assets: bundled assets on a project-site base path
 
 Fork branch: `fix/base-path-assets` (commit `b67ea2c`, on top of upstream `47b06b3`).
 Opened 2026-11-16: issue https://github.com/arslansadiq87/circuit-studio/issues/1, pull request
