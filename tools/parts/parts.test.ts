@@ -8,25 +8,28 @@ import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {after, before, describe, test} from 'node:test';
-import {main} from './cli.mjs';
-import {inspect} from './inspect.mjs';
-import {loadSpec, SpecError} from './spec.mjs';
-import {readStep, StepReadError} from './step.mjs';
+import {main} from '../cli.ts';
+import type {Part} from './convert.ts';
+import {inspect} from './inspect.ts';
+import {loadSpec, SpecError} from './spec.ts';
+import {readStep, StepReadError} from './step.ts';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'test', 'fixtures');
-const reference = name => JSON.parse(readFileSync(join(FIXTURES, `test-board.${name}.reference.json`), 'utf8'));
+const reference = (name: string): unknown => JSON.parse(readFileSync(join(FIXTURES, `test-board.${name}.reference.json`), 'utf8'));
 
 /** Deep comparison where numbers may differ by `tolerance`. */
-function assertClose(actual, expected, tolerance = 0.002, path = '') {
+function assertClose(actual: unknown, expected: unknown, tolerance = 0.002, path = ''): void {
   if (typeof expected === 'number') {
-    assert.equal(typeof actual, 'number', `${path}: number expected`);
+    assert.ok(typeof actual === 'number', `${path}: number expected`);
     assert.ok(Math.abs(actual - expected) <= tolerance, `${path}: ${actual} instead of ${expected}`);
   } else if (Array.isArray(expected)) {
     assert.ok(Array.isArray(actual) && actual.length === expected.length, `${path}: array of ${expected.length} expected`);
     expected.forEach((v, i) => assertClose(actual[i], v, tolerance, `${path}[${i}]`));
   } else if (expected && typeof expected === 'object') {
-    assert.deepEqual(Object.keys(actual).sort(), Object.keys(expected).sort(), `${path}: keys`);
-    for (const k of Object.keys(expected)) assertClose(actual[k], expected[k], tolerance, `${path}.${k}`);
+    assert.ok(actual && typeof actual === 'object', `${path}: object expected`);
+    const a = actual as Record<string, unknown>, e = expected as Record<string, unknown>;
+    assert.deepEqual(Object.keys(a).sort(), Object.keys(e).sort(), `${path}: keys`);
+    for (const k of Object.keys(e)) assertClose(a[k], e[k], tolerance, `${path}.${k}`);
   } else {
     assert.equal(actual, expected, path);
   }
@@ -43,17 +46,11 @@ describe('inspect', () => {
 });
 
 describe('convert', () => {
-  let folder, code, component;
+  let folder: string, code: number, component: {format: string; version: number; part: Part};
   before(async () => {
     folder = mkdtempSync(join(tmpdir(), 'parts-test-'));
     for (const file of ['part.yaml', 'test-board.step']) copyFileSync(join(FIXTURES, file), join(folder, file));
-    const log = console.log;
-    console.log = () => {};
-    try {
-      code = await main(['convert', join(folder, 'part.yaml')]);
-    } finally {
-      console.log = log;
-    }
+    code = await main(['part', 'convert', join(folder, 'part.yaml')], {out: () => {}})
     component = JSON.parse(readFileSync(join(folder, 'test-board.c3dcomponent'), 'utf8'));
   });
   after(() => rmSync(folder, {recursive: true, force: true}));
@@ -73,10 +70,10 @@ describe('convert', () => {
 });
 
 describe('spec errors', () => {
-  let folder;
+  let folder: string;
   before(() => { folder = mkdtempSync(join(tmpdir(), 'parts-spec-')); });
   after(() => rmSync(folder, {recursive: true, force: true}));
-  const load = text => {
+  const load = (text: string) => {
     const file = join(folder, 'part.yaml');
     writeFileSync(file, text);
     return () => loadSpec(file);

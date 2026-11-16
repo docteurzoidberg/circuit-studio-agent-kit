@@ -83,7 +83,7 @@ GLB with OCCT's own glTF writer:
 | Same solids, faces and assembly names | reference | yes (34 names, non-ASCII ones too) |
 | Install size | 1.8 GB Python environment | 64 MB npm package (50 MB WASM) |
 
-Port done the same day in [tools/parts/](../tools/parts/) (`node tools/parts/cli.mjs inspect|convert`, tests with
+Port done the same day in [tools/parts/](../tools/parts/) (`node tools/cli.ts part inspect|convert`, tests with
 `npm test`). On the fixture both commands give the Python outputs exactly (reference JSON in
 `tools/parts/test/fixtures/`). On the MRD076A:
 

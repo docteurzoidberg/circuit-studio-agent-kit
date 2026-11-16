@@ -34,45 +34,92 @@ const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 export class SpecError extends Error {}
 
-const isMapping = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+export type Vector = [number, number, number];
 
-function vector(value, where) {
+export interface Pin {
+  id: string;
+  label: string;
+  /** Position in STEP coordinates, mm. */
+  at: Vector;
+  /** Unit direction a wire leaves the pin, STEP coordinates. */
+  exit: Vector;
+  aliases: string[];
+}
+
+export interface ColourRule {
+  /** Text searched in the solid's assembly path below the root. */
+  match: string;
+  colour: string;
+  largestOver: number | null;
+  largestUnder: number | null;
+}
+
+export interface Spec {
+  /** Absolute path of the spec file. */
+  path: string;
+  id: string;
+  name: string;
+  category: string;
+  /** Absolute path of the STEP model. */
+  step: string;
+  /** Euler XYZ, degrees. */
+  orientation: Vector;
+  meshLinear: number;
+  meshAngular: number;
+  minVolume: number;
+  mergeByColour: boolean;
+  palette: Record<string, string>;
+  rules: ColourRule[];
+  defaultColour: string | null;
+  pins: Pin[];
+}
+
+type Data = Record<string, unknown>;
+
+const isMapping = (v: unknown): v is Data => v !== null && typeof v === 'object' && !Array.isArray(v);
+
+function vector(value: unknown, where: string): Vector {
   if (!(Array.isArray(value) && value.length === 3 && value.every(v => typeof v === 'number'))) {
     throw new SpecError(`${where}: expected three numbers, got ${JSON.stringify(value)}`);
   }
-  return value.map(Number);
+  return value.map(Number) as Vector;
 }
 
-function unit(value, where) {
+function unit(value: unknown, where: string): Vector {
   const v = vector(value, where);
   const norm = Math.hypot(...v);
   if (norm === 0) throw new SpecError(`${where}: direction must not be zero`);
-  return v.map(c => c / norm);
+  return v.map(c => c / norm) as Vector;
 }
 
-function expandPins(entries) {
-  const pins = [];
-  (entries ?? []).forEach((entry, i) => {
+const strings = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
+
+function expandPins(entries: unknown): Pin[] {
+  const pins: Pin[] = [];
+  (Array.isArray(entries) ? entries : []).forEach((entry: unknown, i) => {
     const where = `pins[${i}]`;
     if (!isMapping(entry)) throw new SpecError(`${where}: expected a mapping`);
     if ('generate' in entry) {
       const g = entry.generate;
+      if (!isMapping(g)) throw new SpecError(`${where}.generate: expected a mapping`);
       for (const key of ['ids', 'count', 'start', 'step', 'exit']) {
         if (!(key in g)) throw new SpecError(`${where}.generate: missing "${key}"`);
       }
-      if (!String(g.ids).includes('{n}')) throw new SpecError(`${where}.generate.ids: must contain {n}`);
-      const count = parseInt(g.count, 10);
+      const ids = String(g.ids);
+      if (!ids.includes('{n}')) throw new SpecError(`${where}.generate.ids: must contain {n}`);
+      const count = parseInt(String(g.count), 10);
       const start = vector(g.start, `${where}.generate.start`);
       const step = vector(g.step, `${where}.generate.step`);
       const exit = unit(g.exit, `${where}.generate.exit`);
-      const labels = g.labels ?? [];
-      const aliases = Object.fromEntries(Object.entries(g.aliases ?? {}).map(([k, v]) => [parseInt(k, 10), v.map(String)]));
-      const first = parseInt(g.first ?? 1, 10);
+      const labels = Array.isArray(g.labels) ? g.labels : [];
+      const aliases = new Map(Object.entries(isMapping(g.aliases) ? g.aliases : {})
+        .map(([k, v]) => [parseInt(k, 10), strings(v)] as const));
+      const first = parseInt(String(g.first ?? 1), 10);
       for (let k = 0; k < count; k++) {
         const n = first + k;
-        const id = String(g.ids).replaceAll('{n}', String(n));
+        const id = ids.replaceAll('{n}', String(n));
         const label = k < labels.length && labels[k] != null ? String(labels[k]) : id;
-        pins.push({id, label, at: start.map((s, c) => s + step[c] * k), exit, aliases: aliases[n] ?? []});
+        pins.push({id, label, at: start.map((s, c) => s + step[c] * k) as Vector, exit, aliases: aliases.get(n) ?? []});
       }
       return;
     }
@@ -80,44 +127,49 @@ function expandPins(entries) {
       if (!(key in entry)) throw new SpecError(`${where}: missing "${key}"`);
     }
     pins.push({id: String(entry.id), label: String(entry.label ?? entry.id), at: vector(entry.at, `${where}.at`),
-      exit: unit(entry.exit, `${where}.exit`), aliases: (entry.aliases ?? []).map(String)});
+      exit: unit(entry.exit, `${where}.exit`), aliases: strings(entry.aliases)});
   });
-  const seen = new Set();
+  const seen = new Set<string>();
   const duplicates = new Set(pins.map(p => p.id).filter(id => seen.has(id) || !seen.add(id)));
   if (duplicates.size) throw new SpecError(`pins: duplicate ids ${JSON.stringify([...duplicates].sort())}`);
   return pins;
 }
 
 /** Read and check a part spec; paths are resolved against the spec's folder. */
-export function loadSpec(path) {
-  path = resolve(path);
-  let data;
+export function loadSpec(file: string): Spec {
+  const path = resolve(file);
+  let data: unknown;
   try {
     data = YAML.parse(readFileSync(path, 'utf8'));
   } catch (error) {
-    throw new SpecError(`${path}: ${error.message}`);
+    throw new SpecError(`${path}: ${(error as Error).message}`);
   }
   if (!isMapping(data)) throw new SpecError(`${path}: expected a mapping`);
   for (const key of ['id', 'name', 'step']) {
     if (!data[key]) throw new SpecError(`${path}: missing "${key}"`);
   }
   if (!ID.test(String(data.id))) throw new SpecError(`id: "${data.id}" must be kebab-case (a-z, 0-9, -)`);
-  const mesh = data.mesh ?? {};
-  const simplify = data.simplify ?? {};
-  const colours = data.colours ?? {};
-  const palette = colours.palette ?? {};
-  for (const [name, value] of Object.entries(palette)) {
+  const mesh = isMapping(data.mesh) ? data.mesh : {};
+  const simplify = isMapping(data.simplify) ? data.simplify : {};
+  const colours = isMapping(data.colours) ? data.colours : {};
+  const palette: Record<string, string> = {};
+  for (const [name, value] of Object.entries(isMapping(colours.palette) ? colours.palette : {})) {
     if (!HEX.test(String(value))) throw new SpecError(`colours.palette.${name}: "${value}" is not #rrggbb`);
+    palette[name] = String(value);
   }
-  const colourRef = (value, where) => {
-    if (value in palette) return palette[value];
-    if (HEX.test(String(value))) return String(value);
-    throw new SpecError(`${where}: "${value}" is neither a palette name nor #rrggbb`);
+  const colourRef = (value: unknown, where: string): string => {
+    const text = String(value);
+    if (text in palette) return palette[text];
+    if (HEX.test(text)) return text;
+    throw new SpecError(`${where}: "${text}" is neither a palette name nor #rrggbb`);
   };
-  const rules = (colours.rules ?? []).map((rule, i) => {
-    if (!('match' in rule) || !('colour' in rule)) throw new SpecError(`colours.rules[${i}]: needs "match" and "colour"`);
+  const rules = (Array.isArray(colours.rules) ? colours.rules : []).map((rule: unknown, i): ColourRule => {
+    if (!isMapping(rule) || !('match' in rule) || !('colour' in rule)) {
+      throw new SpecError(`colours.rules[${i}]: needs "match" and "colour"`);
+    }
     return {match: String(rule.match), colour: colourRef(rule.colour, `colours.rules[${i}].colour`),
-      largestOver: rule.largestOver ?? null, largestUnder: rule.largestUnder ?? null};
+      largestOver: typeof rule.largestOver === 'number' ? rule.largestOver : null,
+      largestUnder: typeof rule.largestUnder === 'number' ? rule.largestUnder : null};
   });
   const pins = expandPins(data.pins);
   if (!pins.length) throw new SpecError('pins: at least one pin is needed');

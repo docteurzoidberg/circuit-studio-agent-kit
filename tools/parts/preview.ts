@@ -4,30 +4,43 @@
 // from Circuit Studio itself.
 import {writeFileSync} from 'node:fs';
 import {Resvg} from '@resvg/resvg-js';
-import {rotate} from './convert.mjs';
-import {uniqueSubShapes} from './occt.mjs';
+import {rotate, type ColouredSolid, type Conversion, type Part} from './convert.ts';
+import {uniqueSubShapes, type OC} from './occt.ts';
 
-const VIEWS = [{title: 'Top (X right, Y up)', u: 0, v: 1}, {title: 'Front (X right, Z up)', u: 0, v: 2}];
+interface Triangle {
+  points: number[][];
+  colour: string;
+}
+
+interface View {
+  title: string;
+  /** Index of the axis drawn left to right. */
+  u: number;
+  /** Index of the axis drawn bottom to top. */
+  v: number;
+}
+
+const VIEWS: View[] = [{title: 'Top (X right, Y up)', u: 0, v: 1}, {title: 'Front (X right, Z up)', u: 0, v: 2}];
 const MAX_TRIANGLES = 200_000;
 const PANEL = 760;  // px per view
 const HEADER = 60;
 const PIN = '#e0245e';
 const PIN_TEXT = '#9b1040';
 
-const esc = text => String(text).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c]);
+const esc = (text: string) => text.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[c as '&' | '<' | '>' | '"']);
 
 /** Triangles of every kept solid in the centred, rotated part frame, with their colour. */
-function partFrameTriangles(oc, kept, centre, euler, tolerance) {
-  const out = [];
+function partFrameTriangles(oc: OC, kept: ColouredSolid[], centre: number[], euler: number[], tolerance: number): Triangle[] {
+  const out: Triangle[] = [];
   for (const {shape, colour} of kept) {
     new oc.BRepMesh_IncrementalMesh_2(shape, tolerance, false, 0.5, false);
-    for (const face of uniqueSubShapes(oc, shape, oc.TopAbs_ShapeEnum.TopAbs_FACE)) {
+    for (const face of uniqueSubShapes(oc, shape, 'FACE')) {
       const loc = new oc.TopLoc_Location_1();
       const handle = oc.BRep_Tool.Triangulation(oc.TopoDS.Face_1(face), loc, 0);
       if (handle.IsNull()) continue;
       const tri = handle.get();
       const trsf = loc.Transformation();
-      const nodes = [];
+      const nodes: number[][] = [];
       for (let i = 1; i <= tri.NbNodes(); i++) {
         const p = tri.Node(i).Transformed(trsf);
         nodes.push(rotate([p.X() - centre[0], p.Y() - centre[1], p.Z() - centre[2]], euler));
@@ -42,7 +55,7 @@ function partFrameTriangles(oc, kept, centre, euler, tolerance) {
 }
 
 /** Colour darkened by how much the triangle turns away from the viewer (flat shading). */
-function shaded(hex, [a, b, c], depth) {
+function shaded(hex: string, [a, b, c]: number[][], depth: number): string {
   const e1 = b.map((v, i) => v - a[i]);
   const e2 = c.map((v, i) => v - a[i]);
   const n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
@@ -51,14 +64,14 @@ function shaded(hex, [a, b, c], depth) {
   return '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0')).join('');
 }
 
-function viewSvg(part, triangles, view, x0) {
+function viewSvg(part: Part, triangles: Triangle[], view: View, x0: number): string {
   const {u, v} = view;
   const depth = 3 - u - v;
   const size = Math.max(...part.dimensions);
   const half = (size / 2) * 1.15;
   const scale = PANEL / (2 * half);
-  const X = p => (x0 + (p[u] + half) * scale).toFixed(1);
-  const Y = p => (HEADER + (half - p[v]) * scale).toFixed(1);
+  const X = (p: number[]) => (x0 + (p[u] + half) * scale).toFixed(1);
+  const Y = (p: number[]) => (HEADER + (half - p[v]) * scale).toFixed(1);
   const out = [`<text x="${x0 + PANEL / 2}" y="${HEADER - 12}" font-size="16" text-anchor="middle">${esc(view.title)}</text>`,
     `<rect x="${x0}" y="${HEADER}" width="${PANEL}" height="${PANEL}" fill="none" stroke="#ccc"/>`];
   // Grid every power of ten that gives at least 4 lines.
@@ -96,8 +109,8 @@ function viewSvg(part, triangles, view, x0) {
   return out.join('\n');
 }
 
-/** Draw the preview of a converted part (convert.mjs) into a PNG file. */
-export function writePreview({part, kept, centre, euler, oc}, out, title) {
+/** Draw the preview of a converted part (convert.ts) into a PNG file. */
+export function writePreview({part, kept, centre, euler, oc}: Conversion, out: string, title?: string): {triangles: number; bytes: number} {
   const size = Math.max(...part.dimensions);
   let triangles = partFrameTriangles(oc, kept, centre, euler, Math.max(0.05, size / 150));
   if (triangles.length > MAX_TRIANGLES) {

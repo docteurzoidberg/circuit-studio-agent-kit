@@ -4,11 +4,15 @@
   "description": "Claude Code skills, MCP server and command line that turn an electronics project's wiring into a 3D wiring video rendered by CircuitStudio from Tech Panda.",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "circuit-studio-agent-kit": "tools/cli.ts"
+  },
   "engines": {
     "node": ">=22"
   },
   "scripts": {
-    "test": "node --test tools/catalog/*.test.mjs tools/parts/*.test.mjs"
+    "test": "node --test tools/catalog/*.test.ts tools/parts/*.test.ts",
+    "typecheck": "tsc -p ."
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
@@ -17,5 +21,9 @@
     "three": "^0.186.1",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2"
   }
 }
