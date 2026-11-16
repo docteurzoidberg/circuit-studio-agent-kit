@@ -92,5 +92,6 @@ the `--move`, `--dry-run` and `--reset` options.
 ## What comes next
 
 [`wiring-video`](../../../README.md#skills) renders the video from the validated project (planned); until then,
-Circuit Studio's own **Auto Video** renders it. Preview images in the review and presentation texts come with
-the rendering.
+Circuit Studio's own **Auto Video** renders it. Presentation texts come with the rendering, and so does a shorter
+review: Circuit Studio served on your machine with the project opened, reloaded at every build and saving your
+edits back by itself.

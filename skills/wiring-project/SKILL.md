@@ -83,7 +83,7 @@ part and how it was placed, then the routes:
 
 ## 5. Review
 
-The user checks the project in Circuit Studio itself; this version shows no images of its own. Tell them how,
+The user checks the project loaded in Circuit Studio itself (no preview of the kit replaces it). Tell them how,
 in one message, with the build's summary (parts and how they were placed, routes):
 
 - Open Circuit Studio: their local copy, or the hosted site `https://arslansadiq87.github.io/circuit-studio/`

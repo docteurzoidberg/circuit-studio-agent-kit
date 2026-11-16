@@ -44,6 +44,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D17 | **The kit is written in TypeScript** (2026-11-16), like Circuit Studio, so agents and contributors read one language across both projects. Node 22 runs the `.ts` files directly (type stripping, erasable syntax only, imports ending in `.ts`); `npm run typecheck` checks them with `tsc`; the published package will be a built bundle. |
 | D20 | **`wiring-project` resolves the document into `wiring.json`** (2026-11-16), as its first step, instead of a second run of `wiring-plan` after the parts: the user goes straight from `wiring-parts` to `wiring-project`, and every build checks that `wiring.json` still matches its document. The skill reads the Markdown (D3) and looks pins up with `part pins` (prepared parts and the catalog snapshot, no `.c3dcomponent` to read); the CLI `wiring` checks the result with ajv against the schema, then parts, pins and the document's hash. Answers to ambiguities go into `wiring.md`, so a new resolution gives the same file. |
 | D21 | **`build` plans routes with Circuit Studio's own planner, run in Node** (2026-11-16): the project schema, the built-in part templates and the route planner (`src/model.ts`, `src/autoRouting.ts`) are bundled with esbuild from a local Circuit Studio checkout (the catalog snapshot's, or `--from`) into the kit's `.cache/engine/`, as `part catalog` already does, so `build` needs no browser and checks the routes the app will draw. The same planner is proposed upstream as `planRoutes()` in the automation API; `build` moves to it once upstream has it. Placement: layout hints, else the most connected part at the centre and each other part next to the pins its wires leave from (scored by orthogonal length and parts crossed); flat parts may turn, parts standing up keep the pose `wiring-parts` gave them; parts of blocked wires are moved a few times. Edits made in Circuit Studio win: `.circuitstudio/build.json` records what `build` wrote, so a placement, wire shape or camera that differs is the user's and is kept; the document still decides connections and colours. The review is done by the user in Circuit Studio until the browser driver of `render` can show images. |
+| D22 | **The review is done on the project loaded in Circuit Studio, with no preview of its own** (2026-11-16): a preview drawn by the kit could not replace looking at the generated project in Circuit Studio, which the user does anyway, so the kit draws none. What the review lacks is a shorter loop: a later command serves Circuit Studio from the local checkout, opens the project, reloads it at every build and sends the user's edits back to `.circuitstudio/project.c3dproj` (through the automation API, the fork's build until upstream has it); `render` drives the same server. Until then the user opens and saves the file. |
 
 ## Architecture
 
@@ -99,7 +100,7 @@ project's own files (wiring documents, `wiring.json`, parts, rendered videos) ar
 |---|---|
 | `wiring-plan` | Reads the project's sources (any format) and writes or completes the wiring document from the provided template. Reports inconsistencies, e.g. a GPIO in the docs that differs from the firmware. Asks for the exact terminal when several are equivalent (GND, 3V3, 5V) and can suggest the nearest one. Writes pins as the project's sources name them; Circuit Studio pin identifiers are only needed later, when `wiring-project` resolves the document into `wiring.json` (D20). Interviews a user who starts from nothing. Reviews the document with the user until they validate it. |
 | `wiring-parts` | For each part missing from the Circuit Studio catalog (the user's own model first, otherwise created), runs the part converter (D11). Sources, in order: a STEP already in the project, an online search, modelling from technical drawings with the CAD tools found on the machine (Fusion, FreeCAD, CadQuery, Blender…), or a procedural board with headers as a fallback. Offers to simplify a model only when it is really complex (many solids, a heavy mesh, as reported by `part inspect`); otherwise uses it as it is. Restores colours by rules when a STEP has none, places the pin anchors and checks them with a render. |
-| `wiring-project` | First resolves the document into `wiring.json` (D20: `part pins`, then the CLI `wiring` checks it), then generates the Circuit Studio project from `wiring.json` and the parts (CLI `build`): placement, wire routes, camera and presentation texts. Shows preview images and reports blocked routes or overlapping parts. Reviews the project with the user until they validate it: they ask for changes in plain language or edit the project in the Circuit Studio editor; a regeneration keeps their manual edits. |
+| `wiring-project` | First resolves the document into `wiring.json` (D20: `part pins`, then the CLI `wiring` checks it), then generates the Circuit Studio project from `wiring.json` and the parts (CLI `build`): placement, wire routes, camera and presentation texts. Reports blocked routes. Reviews the project, loaded in Circuit Studio, with the user until they validate it (D22): they ask for changes in plain language or edit the project in the Circuit Studio editor; a regeneration keeps their manual edits. |
 | `wiring-video` | Renders the video from the validated project (CLI `render`): preview of the animation, MP4, WebP and poster; helps the user set up their own automation. |
 
 ### MCP server
@@ -228,8 +229,8 @@ Last update: 2026-11-16. Resume from here.
    fixed, and asked for `--move` and `--dry-run`, added). Found on the way and fixed: the converter placed every instance of a repeated STEP shape on the first
    one (the MRD076A board measured 110.7 x 140.6 mm instead of 73.6 x 84.7 mm), with a regression test. Routing a
    whole project costs seconds (11 s for the 28 wires of the upstream fixture), so placement is scored without
-   routing and the planner runs once per attempt. For later: preview images in the review (with the browser
-   driver of phase 6), presentation texts, stand-ins drawn with visible contacts, and a look at why turning the
+   routing and the planner runs once per attempt. For later: the live link of the review (D22, first step of
+   phase 6), presentation texts, stand-ins drawn with visible contacts, and a look at why turning the
    LED strip stand-in (pins exiting upwards) blocked a wire between two other parts in the test.
 6. Then phases 6 to 8 below.
 
@@ -244,7 +245,8 @@ Last update: 2026-11-16. Resume from here.
 4. **Parts** — part definition from a STEP or a procedural board; pin aliases; preview render.
 5. **Project** — first version done 2026-11-16: CLI `build` (`wiring.json` to `.c3dproj`) with automatic layout and
    routing, merge with manual edits; the `wiring-project` skill.
-6. **Rendering CLI** — `render` with MP4, WebP and poster outputs.
+6. **Rendering CLI** — Circuit Studio served locally with the project opened and kept in sync during the review
+   (D22), then `render` with MP4, WebP and poster outputs on the same server.
 7. **Skills and MCP server** — `wiring-video` (`wiring-plan` is done in phase 3, `wiring-parts` in phase 4,
    `wiring-project` in phase 5); the MCP
    server; packaging, `init` and `uninstall`.
@@ -278,5 +280,5 @@ Ideas kept for later (not planned until needed):
 |---|---|
 | Upstream is two days old and changes fast | Pin a commit; keep the adapter thin; contribute a stable API |
 | Many parts missing from the catalog | `wiring-parts` skill; procedural fallback; parts reusable across projects |
-| Automatic layout unreadable on dense circuits | Keep manual edits in the generated project; preview before rendering |
+| Automatic layout unreadable on dense circuits | Keep manual edits in the generated project; review it in Circuit Studio before rendering |
 | Driving Windows Chrome from WSL is fragile | Validate in the spike; support native Chrome on Linux/macOS |

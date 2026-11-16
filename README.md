@@ -71,9 +71,9 @@ flowchart LR
 
 3. **Build the project.** The `wiring-project` skill first resolves the document into a `wiring.json` (parts,
    pin identifiers, wire order, layout hints), the only input of the CLI, asking the owner when a pin name is
-   ambiguous; then it generates the Circuit Studio project from `wiring.json` and the parts: placement, wire routes, camera and presentation texts. It shows preview images and reviews the
-   project with the owner until they validate it; the owner can also open it in the Circuit Studio editor and
-   move things by hand, and a later regeneration keeps those edits.
+   ambiguous; then it generates the Circuit Studio project from `wiring.json` and the parts: placement, wire routes, camera and presentation texts. It reviews the
+   project, loaded in Circuit Studio, with the owner until they validate it; the owner asks for changes in words or
+   moves things by hand in the editor, and a later regeneration keeps those edits.
 
 4. **Render.** The `wiring-video` skill (or the CLI, or the MCP server) renders the project into an MP4 plus a
    WebP and a poster image for the README. Rendering runs locally in Chrome with a GPU.
