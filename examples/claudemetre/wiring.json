@@ -4,7 +4,7 @@
   "title": "Claudemètre",
   "source": {
     "path": "wiring.md",
-    "sha256": "d9b574d674f759f26607edbaecf6b227c3b53144da912e22b93357ef31acf5ca"
+    "sha256": "606ade10f79914edbb31ddb9b81f9926762a9e15540ca38b45d5fa404a1a4731"
   },
   "parts": [
     {
@@ -12,16 +12,16 @@
       "kind": "prepared",
       "ref": "mrd076a-esp32-s3",
       "model": "design/references/mrd076a/MDR076A+ESP32-S3.STEP",
-      "note": "ESP32-S3-DevKitC-1 N16R8 on the MRD076A",
-      "line": 26
+      "note": "ESP32-S3-DevKitC-1 N16R8 plugged on the MRD076A; one model",
+      "line": 33
     },
     {
       "name": "Session gauge",
       "kind": "prepared",
       "ref": "so-45",
       "model": "design/references/so45/so-45-voltmeter.step",
-      "note": "full scale lowered to ~3 V (6.2 kΩ inside)",
-      "line": 27
+      "note": "full scale lowered to ~3 V by a 6.2 kΩ resistor inside",
+      "line": 34
     },
     {
       "name": "Week gauge",
@@ -29,15 +29,15 @@
       "ref": "so-45",
       "model": "design/references/so45/so-45-voltmeter.step",
       "note": "same as the session gauge",
-      "line": 28
+      "line": 35
     },
     {
       "name": "Display",
       "kind": "prepared",
       "ref": "tm1637",
       "model": "design/references/tm1637/Display_4-Didi_LED_TM1637.stp",
-      "note": "4-digit 0.56\" module, powered at 3.3 V",
-      "line": 29
+      "note": "4-digit 0.56\" module; the model is green with a colon, the real one yellow with dots",
+      "line": 36
     },
     {
       "name": "Strip",
@@ -52,23 +52,8 @@
         "DIN",
         "GND"
       ],
-      "note": "4 × WS2812B, 144 LED/m; wires soldered",
-      "line": 30
-    },
-    {
-      "name": "D1",
-      "kind": "stand-in",
-      "size": [
-        9,
-        4,
-        4
-      ],
-      "pins": [
-        "A",
-        "K"
-      ],
-      "note": "1N400x, soldered at the strip's +5V input",
-      "line": 31
+      "note": "4 × WS2812B, 144 LED/m, behind the CLAUDE legend; wires soldered",
+      "line": 37
     },
     {
       "name": "Buck",
@@ -85,7 +70,7 @@
         "OUT-"
       ],
       "note": "Mini360 step-down, 12 V to 5 V",
-      "line": 32
+      "line": 38
     },
     {
       "name": "Power socket",
@@ -93,20 +78,20 @@
       "ref": "lp16-2pole",
       "model": "design/references/lp16/LP-16-2pole.step",
       "note": "12 V input on the side plate (1 = +12 V)",
-      "line": 33
+      "line": 39
     },
     {
       "name": "Fuse",
       "kind": "prepared",
       "ref": "fuse-holder",
       "model": "design/references/fusible/fuse_holder.step",
-      "note": "protects the 12 V input",
-      "line": 34
+      "note": "5 × 20 panel fuse holder, protects the 12 V input",
+      "line": 40
     }
   ],
   "connections": [
     {
-      "color": "orange",
+      "color": "red",
       "from": {
         "part": "Power socket",
         "pin": "1",
@@ -120,10 +105,10 @@
         }
       ],
       "note": "+12 V",
-      "line": 43
+      "line": 49
     },
     {
-      "color": "orange",
+      "color": "red",
       "from": {
         "part": "Fuse",
         "pin": "SIDE",
@@ -137,7 +122,7 @@
         }
       ],
       "note": "+12 V fused",
-      "line": 44
+      "line": 50
     },
     {
       "color": "black",
@@ -154,7 +139,7 @@
         }
       ],
       "note": "0 V",
-      "line": 45
+      "line": 51
     },
     {
       "color": "red",
@@ -170,8 +155,8 @@
           "text": "Board 5V"
         }
       ],
-      "note": "5 V into the board (USB not used)",
-      "line": 46
+      "note": "+5 V into the board",
+      "line": 52
     },
     {
       "color": "black",
@@ -187,7 +172,7 @@
           "text": "Board J1-22 (GND)"
         }
       ],
-      "line": 47
+      "line": 53
     },
     {
       "color": "blue",
@@ -204,7 +189,7 @@
         }
       ],
       "note": "PWM 25 kHz, 1.2 mA max",
-      "line": 48
+      "line": 54
     },
     {
       "color": "purple",
@@ -221,7 +206,7 @@
         }
       ],
       "note": "PWM 25 kHz, 1.2 mA max",
-      "line": 49
+      "line": 55
     },
     {
       "color": "black",
@@ -237,7 +222,7 @@
           "text": "Session gauge -"
         }
       ],
-      "line": 50
+      "line": 56
     },
     {
       "color": "black",
@@ -253,7 +238,7 @@
           "text": "Week gauge -"
         }
       ],
-      "line": 51
+      "line": 57
     },
     {
       "color": "green",
@@ -269,7 +254,7 @@
           "text": "Display CLK"
         }
       ],
-      "line": 52
+      "line": 58
     },
     {
       "color": "brown",
@@ -285,7 +270,7 @@
           "text": "Display DIO"
         }
       ],
-      "line": 53
+      "line": 59
     },
     {
       "color": "orange",
@@ -302,7 +287,7 @@
         }
       ],
       "note": "3.3 V, not 5 V",
-      "line": 54
+      "line": 60
     },
     {
       "color": "black",
@@ -318,7 +303,7 @@
           "text": "Display GND"
         }
       ],
-      "line": 55
+      "line": 61
     },
     {
       "color": "yellow",
@@ -334,8 +319,8 @@
           "text": "Strip DIN"
         }
       ],
-      "note": "3.3 V data, no level shifter",
-      "line": 56
+      "note": "3.3 V data into the strip's input end",
+      "line": 62
     },
     {
       "color": "red",
@@ -346,30 +331,13 @@
       },
       "to": [
         {
-          "part": "D1",
-          "pin": "A",
-          "text": "D1 A"
-        }
-      ],
-      "note": "ferrule shared with the buck output",
-      "line": 57
-    },
-    {
-      "color": "red",
-      "from": {
-        "part": "D1",
-        "pin": "K",
-        "text": "D1 K"
-      },
-      "to": [
-        {
           "part": "Strip",
           "pin": "+5V",
           "text": "Strip +5V"
         }
       ],
-      "note": "diode soldered on the strip",
-      "line": 58
+      "note": "ferrule shared with the Mini360 output",
+      "line": 63
     },
     {
       "color": "black",
@@ -385,8 +353,8 @@
           "text": "Strip GND"
         }
       ],
-      "note": "ferrule shared with the buck output",
-      "line": 59
+      "note": "ferrule shared with the Mini360 output",
+      "line": 64
     }
   ],
   "layout": [
@@ -395,63 +363,56 @@
       "x": 0,
       "y": 0,
       "rotation": 0,
-      "line": 72
+      "line": 77
     },
     {
       "part": "Session gauge",
       "x": -40,
       "y": -105,
       "rotation": 0,
-      "line": 73
+      "line": 78
     },
     {
       "part": "Week gauge",
       "x": 40,
       "y": -105,
       "rotation": 0,
-      "line": 74
+      "line": 79
     },
     {
       "part": "Display",
       "x": 0,
       "y": 90,
       "rotation": 180,
-      "line": 75
+      "line": 80
     },
     {
       "part": "Strip",
       "x": -80,
       "y": 95,
       "rotation": 0,
-      "line": 76
-    },
-    {
-      "part": "D1",
-      "x": -100,
-      "y": 62,
-      "rotation": 0,
-      "line": 77
+      "line": 81
     },
     {
       "part": "Buck",
       "x": -95,
       "y": -40,
       "rotation": 0,
-      "line": 78
+      "line": 82
     },
     {
       "part": "Fuse",
       "x": -150,
       "y": -35,
       "rotation": 0,
-      "line": 79
+      "line": 83
     },
     {
       "part": "Power socket",
       "x": -150,
       "y": -95,
       "rotation": 0,
-      "line": 80
+      "line": 84
     }
   ]
 }
