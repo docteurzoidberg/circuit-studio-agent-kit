@@ -186,7 +186,8 @@ Last update: 2026-11-16. Resume from here.
 
 1. **Follow upstream** at the start of each session: state of #1 to #4, review comments, rebase the fork
    branches if `main` moved; update the README State column and docs/upstream-contributions.md.
-2. **Propose the next changes** once the maintainer has reacted to #2 and #4: Presentation in project (texts in
+2. **Propose the next changes** after the `wiring-parts` skill (decided 2026-11-16; the maintainer fixed #1 and #3
+   himself in `1713780`, so #2 and #4 are closed): Presentation in project (texts in
    [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md)), then the Automation API
    (draft texts to write).
 3. **Phase 3, document format**, in the order a user meets it: (a) `wiring-plan` writes `wiring.md` from the

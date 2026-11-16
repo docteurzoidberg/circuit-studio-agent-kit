@@ -1,0 +1,43 @@
+# Part spec of the Claudemètre's board: an MRD076A screw-terminal adapter carrying an ESP32-S3-DevKitC-1.
+# Written by hand on 2026-11-16 while building the part converter; the kind of spec the wiring-parts skill writes
+# with the user. Checked with `part convert`: 44 pins, 73.6 x 84.7 x 20.46 mm, same output in Python and TypeScript.
+#
+# In the Claudemètre project this file would be .circuitstudio/parts/mrd076a-esp32-s3/part.yaml, and `step` is
+# relative to it. The STEP file comes from a third party and is not in this repository.
+id: mrd076a-esp32-s3
+name: MRD076A terminal adapter + ESP32-S3-DevKitC-1
+category: microcontroller
+step: "../../../design/references/mrd076a/MDR076A+ESP32-S3.STEP"
+mesh: { linear: 0.25, angular: 0.7 }
+colours:
+  palette: { pcb: "#2a2b28", terminal: "#2f9e4f", steel: "#a4a4aa", plastic: "#141414", gold: "#e4bb5c", shield: "#b9ae9b" }
+  rules:
+    - { match: "Screw Terminal", largestOver: 6, colour: terminal }
+    - { match: "Screw Terminal", colour: steel }
+    - { match: "USB-C", colour: steel }
+    - { match: "Terminal Block", largestOver: 50, colour: plastic }
+    - { match: "Terminal Block", colour: gold }
+    - { match: "Штыревой", largestOver: 5, colour: gold }
+    - { match: "Штыревой", colour: plastic }
+    - { match: "ESP32-S3-WROOM-1", largestOver: 50, colour: pcb }
+    - { match: "ESP32-S3-WROOM-1", largestOver: 12, colour: shield }
+    - { match: "ESP32-S3-WROOM-1", colour: gold }
+    - { match: "MDR076A", largestOver: 50, colour: pcb }
+    - { match: "MDR076A", colour: gold }
+  default: plastic
+pins:
+  - generate:
+      ids: "J1-{n}"
+      count: 22
+      start: [-29.17, 79.1, 4.0]
+      step: [0, -3.5, 0]
+      exit: [-1, 0, 0]
+      labels: [3V3, 3V3, RST, GPIO4, GPIO5, GPIO6, GPIO7, GPIO15, GPIO16, GPIO17, GPIO18, GPIO8, GPIO3, GPIO46, GPIO9, GPIO10, GPIO11, GPIO12, GPIO13, GPIO14, 5V, GND]
+      aliases: { 21: [5V0] }
+  - generate:
+      ids: "J3-{n}"
+      count: 22
+      start: [29.17, 79.1, 4.0]
+      step: [0, -3.5, 0]
+      exit: [1, 0, 0]
+      labels: [GND, TX / GPIO43, RX / GPIO44, GPIO1, GPIO2, GPIO42, GPIO41, GPIO40, GPIO39, GPIO38, GPIO37, GPIO36, GPIO35, GPIO0, GPIO45, GPIO48, GPIO47, GPIO21, GPIO20 / USB D+, GPIO19 / USB D-, GND, GND]
