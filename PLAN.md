@@ -246,8 +246,11 @@ Last update: 2026-11-16. Resume from here.
       D25) — written on 2026-11-16 (`tools/studio/`, `tools/bridge/`, 8 tests; first as an MCP server, dropped the
       same day) and checked end to end with the fork
       branch `feat/kit-bridge` (written, 6 tests): the Claudemètre project opened in the page, an image rendered in
-      0.7 s; next, the review of `wiring-project` on it, tested by a fresh agent; `init` offers the local build or
-      the manual way.
+      0.7 s; the review of `wiring-project` on it, tested by a fresh agent with the owner on 2026-11-16 (project
+      opened in the owner's browser, an edit made in the editor read back and kept by build, page reloaded,
+      validated); the page's header shows a red badge with the driving tool, its address and **Disconnect**.
+      After validation the skill offers the video while the page is connected, keeping it connected. Next:
+      `init` offers the local build or the manual way.
    3. `render` on the same bridge: MP4, WebP, poster; headless Chrome for CI.
 7. Then phases 7 and 8 below.
 

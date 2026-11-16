@@ -39,7 +39,7 @@ Talk to the user in their language. Everything written to files is in English.
   or the user has not validated it, say so and ask whether to go on or to finish it with `wiring-plan` first.
 - If `.circuitstudio/wiring.json` exists, run `<kit> wiring`. When it reports no problem, the file is up to date
   with the document: run the `part pins` check below anyway (the parts may have changed), then skip to the build
-  (step 4) and say so. Otherwise resolve again from the whole document
+  (step 4) and say so (the pin review of step 3 was done when the file was written). Otherwise resolve again from the whole document
   (step 2): the answers the user gave earlier are in the document, so unchanged rows give the same result.
 - Run `<kit> part pins` with every *Part* identifier of the document that is not a stand-in, once. An identifier
   it does not find is a part `wiring-parts` has not prepared yet: stop and offer to run `wiring-parts` first.
@@ -70,7 +70,8 @@ part and how it was placed, then the routes:
   the user asked (`--move`); `kept`: where the user put it, in Circuit Studio or with an earlier `--move` (build
   never moves those again, until `--reset`).
 - The route planner is Circuit Studio's own, taken from the local checkout the catalog snapshot came from (its
-  path ends the routes line).
+  path ends the routes line). The page plans the routes again when it opens the project, with its own copy of the
+  same planner: what the user sees is the page's.
 - `routes: N wires, none blocked`: every wire found a route with the planner Circuit Studio itself uses. Blocked
   wires are listed with their document line: the project is written anyway, but a blocked wire is drawn without
   a route in Circuit Studio. Never leave one: propose a move in the review (step 5).
@@ -88,17 +89,21 @@ part and how it was placed, then the routes:
 The user checks the project loaded in Circuit Studio itself (no preview of the kit replaces it). How it gets
 there depends on how the kit reaches Circuit Studio (D23), which `init` set up:
 
-- **Connected**: `<kit> studio status` names a Circuit Studio. The Circuit Studio page connects to the kit and the
-  kit opens the project in it; the user only looks and edits, nothing to open or save by hand.
+- **Connected**: `<kit> studio status` names a Circuit Studio ("studio is not running" is normal before the first
+  `studio open`). The Circuit Studio page connects to the kit and the kit opens the project in it; the user only
+  looks and edits, nothing to open or save by hand. The page shows "Driven by Circuit Studio agent kit" in its
+  header while the kit drives it.
 - **Manual**: `<kit> studio status` says none is configured. Say once that without a
   Circuit Studio that has the kit's bridge on this machine (the kit's fork, until the author's version has it),
   the kit can load the project neither for the review nor for the video: the user opens and saves it themselves.
 
-**Opening it.** In one message, with the build's summary (parts and how they were placed, routes):
+**Opening it.** Keep this message short: the build's summary (parts and how they were placed, routes), then:
 
 - *Connected*: ask whether to open the project in Circuit Studio (it opens a tab in their browser, or reuses the
   one already connected). On yes, run `<kit> studio open`. When it answers with a link instead (no page connected
-  in time), give the user that link and run `<kit> studio open` again once they have opened it.
+  in time), give the user that link (it only works on this machine) and run `<kit> studio open` again once they
+  have opened it. Once open, say so in one line and wait for their review: what to look at and how to change
+  things go in that same line or the next message, not twice.
 - *Manual*: their local copy, or the hosted site `https://arslansadiq87.github.io/circuit-studio/` (everything
   runs in their browser; the file is not uploaded anywhere): **Open**, then `.circuitstudio/project.c3dproj`.
 
@@ -113,40 +118,49 @@ Then, in the same message:
     current position to start from. Such a move counts as the user's edit and stays.
   - **back to the document's placement or to build's**: `--reset <part name>`. Use it too when a requested move
     only brings a part back to its *Layout* row, so a later change of that row still applies.
-  - **in the editor**: they move parts or reshape wires in Circuit Studio. *Connected*: nothing more to do, the
-    kit reads them back. *Manual*: **Save**, and put the saved file in place of `.circuitstudio/project.c3dproj`.
-    Every later build keeps their positions, rotations and wire shapes (and, manual way, their camera).
+  - **in the editor**: they move parts or reshape wires in Circuit Studio. *Connected*: run `<kit> studio sync`,
+    which reads them back into the project file and lists them, and show that list; no build is needed, the page
+    already shows their edit and plans its routes. Build again only if they also ask for something else, or
+    want the routes checked. *Manual*: **Save**, and put the saved file in place of
+    `.circuitstudio/project.c3dproj`. Every later build keeps their positions, rotations and wire shapes (and,
+    manual way, their camera).
 - Changes of wiring (a pin, a colour, a part) go into the document, not the project: then resolve and build again
   (steps 2 to 4).
 
 **Connected: keep the page and the file in step.** Run `<kit> studio sync` before every build and before ending the
 review: it writes what the user changed in the page into the project file, where build keeps it. A build without
 it would lose those edits, since the reload replaces the page's project. After every build, run `<kit> studio open`
-again: the page reloads the new project (no new tab). When the user has validated the project, run
-`<kit> studio stop`.
+again: the page reloads the new project (no new tab). When the user validates, run `<kit> studio sync` once more;
+whether the page stays connected is settled in the report (next step).
 
 **Blocked wires**: try a few moves with `--dry-run` first (nothing is written; a build with blocked wires takes
 10 to 15 s): the parts of the blocked wire and their neighbours, a little further out or turned. After about five
 tries without a fully routed layout, stop and show the user what you tried and the best result. Propose only a
 layout you have built (not dry-run) and seen fully routed, and say which of the user's moves it changes.
 
-After each change, build again and show only what changed (placements, routes). The project is done only on an
-explicit "ok" from the user; never take silence or a new topic as one.
+After each change asked in words or in the document, build again and show only what changed (placements,
+routes). The project is done only on an explicit "ok" from the user; never take silence or a new topic as one.
 
 ## 6. Report
 
 In a few lines: the number of parts (by kind: built-in, prepared, stand-in) and of wires, the pins resolved
 through a label, an alias or the document's own explanations (grouped by part, so the user can check them:
-"Display: CLK P1, DIO P2, VCC P3, GND P4"), the answers written into the document, the project file and its
+"Display: CLK P1, DIO P2, VCC P3, GND P4"; when step 2 was skipped, read them from `<kit> wiring --wires`, where
+`=` marks a pin found by its label or an alias), the answers written into the document (none when step 2 was
+skipped), the project file and its
 routes, and what remains:
 
 - **Committing**: `wiring.json` is meant to be committed with the project, since the command line renders from it.
   `project.c3dproj` embeds the prepared parts' models, often derived from third-party files that may not be
   redistributable (as `wiring-parts` said about the parts, in `.circuitstudio/parts/`): publishing them is the
   user's call and responsibility (D24). `build.json` only matters next to the project. Re-rendering the video in
-  CI later needs the parts and the project committed. Check what git ignores (`git check-ignore .circuitstudio/*` and `.circuitstudio/parts`), say
+  CI later needs the parts and the project committed. The kit's own `.circuitstudio/.gitignore` already leaves out
+  `studio.json` and `studio.log` (the review process). Check what git ignores
+  (`git check-ignore -v .circuitstudio/* .circuitstudio/parts`; exit code 1 only means nothing is ignored), say
   what would be committed, and let the user decide; offer to add `.circuitstudio/project.c3dproj`,
-  `.circuitstudio/build.json` (and `.circuitstudio/parts/` if `wiring-parts` did not settle it) to `.gitignore` if
-  they want to keep them local. Never decide it for them.
-- **Next step**: `wiring-video` renders the video (planned); until then, Circuit Studio's own **Auto Video**
-  renders the opened project.
+  `.circuitstudio/build.json` and `.circuitstudio/parts/` to `.gitignore` if they want to keep them local. Never
+  decide it for them.
+- **Next step, the video**: offer to make it now. *Connected*: the page is still connected with the validated
+  project, so the video can be rendered in it straight away; on yes, keep the page connected (no `studio stop`)
+  and go on with `wiring-video` (planned; until it exists, tell the user to click **Auto Video** in the open
+  page). On no, run `<kit> studio stop`. *Manual*: the user renders it with **Auto Video** in Circuit Studio.

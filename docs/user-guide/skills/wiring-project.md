@@ -68,7 +68,8 @@ flowchart TD
 - **You check it in Circuit Studio.** When the kit reaches Circuit Studio (see
   [How the kit reaches Circuit Studio](../../../README.md#how-the-kit-reaches-circuit-studio)), the skill asks
   whether to open the project, opens it in your browser and reloads it after every build; what you move in the
-  editor is read back by itself. Otherwise you open `.circuitstudio/project.c3dproj` there yourself (your local
+  editor is read back by itself. While the kit drives the page, a red-bordered badge in its header says so
+  ("Driven by Circuit Studio agent kit", its address, and a **Disconnect** button). Otherwise you open `.circuitstudio/project.c3dproj` there yourself (your local
   copy or the hosted site; the file stays in your browser), **Save**, and put the saved file in place of the
   project. Ask for changes in words ("put the display above the board"), or move things yourself in the editor.
   Every later build keeps
@@ -87,6 +88,11 @@ A fresh agent, with no knowledge of the project, ran the skill on a copy of the
 2 stand-ins): 8 parts, 16 wires and 8 placements resolved without a question, the same wiring as
 [examples/claudemetre/wiring.json](../../../examples/claudemetre/wiring.json).
 
+A third fresh agent ran the review through the kit's connection to Circuit Studio (2026-11-16): the project
+opened by itself in the owner's browser, the owner moved the step-down converter in the editor, the kit read it
+back, rebuilt with every wire routed and reloaded the page, and the owner validated it. Its remarks shortened the
+review messages and settled when to rebuild (not after an edit made in the editor).
+
 A second fresh agent then built and reviewed the project on the same copy: every part placed from the document's
 *Layout* table and every wire routed; asked in words to bring the step-down converter closer and turn the LED
 strip, it found that both moves together blocked a wire, tried other positions, and settled with the user on a
@@ -95,7 +101,8 @@ the `--move`, `--dry-run` and `--reset` options.
 
 ## What comes next
 
-[`wiring-video`](../../../README.md#skills) renders the video from the validated project (planned); until then,
+[`wiring-video`](../../../README.md#skills) renders the video from the validated project (planned): when the page
+is still connected, the skill offers it right after you validate, without reopening anything; until then,
 Circuit Studio's own **Auto Video** renders it. Presentation texts come with the rendering, and so does a shorter
 review: Circuit Studio served on your machine with the project opened, reloaded at every build and saving your
 edits back by itself.

@@ -9,6 +9,10 @@ import {extname, join, normalize, sep} from 'node:path';
 import {WebSocket, WebSocketServer} from 'ws';
 
 export const BRIDGE_PORT = 5199;
+/** The bridge protocol the page announces in its hello (and that its build contains). */
+export const PROTOCOL = 'circuit-studio-bridge/1';
+/** The name the page shows in its header while the kit drives it. */
+export const CLIENT_NAME = 'Circuit Studio agent kit';
 const PORTS = 10;
 const PATH = '/bridge';
 
@@ -41,7 +45,7 @@ export function findBuild(from: string): string {
   const dir = [join(from, 'dist'), from].find(d => existsSync(join(d, 'index.html')) && existsSync(join(d, 'assets')));
   if (!dir) throw new Error(`${from}: no Circuit Studio build (dist/index.html): run npm run build in the checkout`);
   const scripts = readdirSync(join(dir, 'assets')).filter(f => f.endsWith('.js'));
-  if (!scripts.some(f => readFileSync(join(dir, 'assets', f), 'utf8').includes('Automation client'))) {
+  if (!scripts.some(f => readFileSync(join(dir, 'assets', f), 'utf8').includes(PROTOCOL))) {
     throw new Error(`${dir}: this Circuit Studio build has no bridge to the kit; until the author's version has it, `
       + 'build the kit\'s fork (branch feat/kit-bridge of docteurzoidberg/circuit-studio)');
   }
@@ -165,18 +169,19 @@ export class Bridge {
     const timeout = setTimeout(() => ws.close(CLOSE_REJECTED, 'no hello'), 5000);
     ws.once('message', data => {
       clearTimeout(timeout);
-      let hello: {type?: string; token?: string};
+      let hello: {type?: string; token?: string; protocol?: string};
       try {
         hello = JSON.parse(String(data));
       } catch {
         hello = {};
       }
-      if (hello.type !== 'hello' || hello.token !== this.token) {
+      if (hello.type !== 'hello' || hello.token !== this.token || hello.protocol !== PROTOCOL) {
         ws.close(CLOSE_REJECTED, 'wrong token');
         return;
       }
       if (this.page && this.page !== ws) this.page.close(CLOSE_REPLACED, 'another page took over');
       this.page = ws;
+      ws.send(JSON.stringify({type: 'welcome', client: CLIENT_NAME}));
       this.log('Circuit Studio page connected');
       ws.on('message', message => this.receive(String(message)));
       ws.on('close', () => {

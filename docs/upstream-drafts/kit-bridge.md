@@ -56,7 +56,10 @@ local tool                                            Circuit Studio page
 - **Nothing new to call.** The requests are the automation API's methods (`openProject`, `getProject`,
   `listParts`, `capabilities`, `renderImage`, `renderVideo`, `planRoutes`, plus `ready`); a `Blob` result comes
   back as base64; `renderVideo` streams its progress and can be cancelled.
-- **Long-lived tabs.** A small note in a corner says whether the tool is connected; the page reconnects every 2 s
+- **Always visible.** While the bridge is on, a red-bordered badge in the header, next to the project name, says
+  which tool drives the page and from which address ("Driven by <tool> · 127.0.0.1:5199"), with a
+  **Disconnect** button that cuts the link (and drops it from the address bar, so a reload does not reconnect).
+- **Long-lived tabs.** The page reconnects every 2 s
   after a drop, so a tool that restarts finds the tab again, and stops when the tool says another tab took over
   or the link is outdated.
 
@@ -70,7 +73,7 @@ their back. The same link works from a CI job with a headless browser.
 
 Questions where your preference matters:
 
-1. the fragment parameter names (`bridge`, `token`) and the status note (wording, place, or none);
+1. the fragment parameter names (`bridge`, `token`) and the header badge (wording, look);
 2. whether the hosted site should allow it at all (browsers ask the visitor once before a public site reaches
    `127.0.0.1`), or only builds served locally;
 3. one connection per page (as now), or several.
@@ -90,10 +93,12 @@ only opens a link.
 Changes:
 
 - `src/bridge.ts` (new): reads the fragment (loopback `ws:` addresses only), connects, introduces itself with
-  `{type: "hello", token, protocol: 1, api: 1}`, runs `{id, method, params}` requests on `window.circuitStudio`
+  `{type: "hello", token, protocol: "circuit-studio-bridge/1", api: 1}`, runs `{id, method, params}` requests on `window.circuitStudio`
   (an allow-list of its methods), answers `{id, result}` or `{id, error}`, sends `Blob` results as base64, streams
   `renderVideo` progress and handles `{cancel: id}`; reconnects every 2 s, except after close codes 4000 (another
-  tab took over) and 4001 (token refused); a small status note in a corner.
+  tab took over) and 4001 (token refused); shows the tool's name when it sends `{type: "welcome", client}`.
+- `src/BridgeBadge.tsx` (new), `src/App.tsx`, `src/style.css`: the header badge (who drives the page, its address,
+  **Disconnect**).
 - `src/main.tsx`: starts the bridge after the automation API, only when the fragment asks for it.
 - `docs/AUTOMATION_API.md`: a *Bridge* section (principle, link format, security, messages, reconnection,
   browsers).

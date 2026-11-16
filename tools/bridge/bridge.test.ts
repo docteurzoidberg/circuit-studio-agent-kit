@@ -15,7 +15,7 @@ const temp = mkdtempSync(join(tmpdir(), 'kit-bridge-'));
 const build = join(temp, 'circuit-studio', 'dist');
 mkdirSync(join(build, 'assets'), {recursive: true});
 writeFileSync(join(build, 'index.html'), '<!doctype html><title>Circuit Studio</title>');
-writeFileSync(join(build, 'assets', 'index.js'), "note.textContent='Automation client: connected'");
+writeFileSync(join(build, 'assets', 'index.js'), "const BRIDGE_PROTOCOL='circuit-studio-bridge/1'");
 process.env.CIRCUIT_STUDIO_KIT_CONFIG = join(temp, 'config');
 
 const project = (): CsProject => ({
@@ -33,9 +33,15 @@ const project = (): CsProject => ({
 async function page(bridge: Bridge, {token = bridge.token, origin = bridge.base.replace(/\/$/, '')} = {}) {
   const ws = new WebSocket(`ws://127.0.0.1:${bridge.port}/bridge`, {origin});
   let held: CsProject | undefined;
+  let welcome: {type?: string; client?: string} | undefined;
   const closed = new Promise<number>(resolve => ws.on('close', code => resolve(code)));
   ws.on('message', data => {
-    const {id, method, params} = JSON.parse(String(data));
+    const message = JSON.parse(String(data));
+    if (message.type) {
+      welcome = message;
+      return;
+    }
+    const {id, method, params} = message;
     if (method === 'openProject') {
       held = JSON.parse(params[0]);
       ws.send(JSON.stringify({id, result: {name: held!.name, components: held!.components.length, wires: held!.wires.length}}));
@@ -49,8 +55,8 @@ async function page(bridge: Bridge, {token = bridge.token, origin = bridge.base.
     ws.once('open', resolve);
     ws.once('error', reject);
     ws.once('unexpected-response', () => reject(new Error('refused')));
-  }).then(() => ws.send(JSON.stringify({type: 'hello', token, protocol: 1, api: 1})));
-  return {ws, closed, held: () => held!, edit: (change: (p: CsProject) => void) => change(held!)};
+  }).then(() => ws.send(JSON.stringify({type: 'hello', token, protocol: 'circuit-studio-bridge/1', api: 1})));
+  return {ws, closed, held: () => held!, welcome: () => welcome, edit: (change: (p: CsProject) => void) => change(held!)};
 }
 
 after(() => rmSync(temp, {recursive: true, force: true}));
@@ -113,6 +119,8 @@ describe('bridge', () => {
   test('calls the page, with progress, and lets a newer page take over', async () => {
     const first = await page(bridge);
     assert.equal(await bridge.waitForPage(2000), true);
+    for (let i = 0; i < 50 && !first.welcome(); i++) await new Promise(r => setTimeout(r, 20));
+    assert.deepEqual(first.welcome(), {type: 'welcome', client: 'Circuit Studio agent kit'});
     const progress: unknown[] = [];
     assert.deepEqual(await bridge.call('renderVideo', [{}], p => progress.push(p)), {frames: 2});
     assert.deepEqual(progress, [{progress: 0.5}]);
@@ -139,7 +147,8 @@ describe('studio', () => {
     try {
       assert.match(await studio.open({browser: false, wait: 0.2}), /No Circuit Studio page connected[\s\S]*#bridge=/);
       const fake = await page(studio.bridge);
-      assert.match(await studio.open({browser: false}), /2 parts, 1 wires/);
+      assert.match(await studio.open({browser: false}), /^Opened .*2 parts, 1 wires/);
+      assert.match(await studio.open({browser: false}), /^Reloaded/);
       assert.match(await studio.sync(), /No edit/);
       fake.edit(p => { p.components[0].position = [-30, 10, 0]; p.components[0].rotation = [0, 0, 180]; });
       assert.match(await studio.sync(), /MCU x -30, y 10, 180°/);
@@ -171,6 +180,7 @@ describe('studio', () => {
     assert.equal((await fetch(`http://127.0.0.1:${state.port}/__kit/status`, {method: 'POST'})).status, 403);
     assert.equal((await fetch(`http://127.0.0.1:${state.port}/__kit/status`, {method: 'POST',
       headers: {'x-kit-control': state.control, origin: 'https://example.com'}})).status, 403);
+    assert.equal(readFileSync(join(root, '.circuitstudio', '.gitignore'), 'utf8').split('\n').filter(l => l && !l.startsWith('#')).join(' '), 'studio.json studio.log');
     assert.match((await run('stop')).text, /stopped/);
     for (let i = 0; i < 50 && (await run('status')).text.includes('page:'); i++) await new Promise(r => setTimeout(r, 100));
     assert.match((await run('status')).text, /not running/);

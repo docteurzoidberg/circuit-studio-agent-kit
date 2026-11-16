@@ -12,7 +12,7 @@
 // different from the page's token (which the page's link shows).
 import {randomBytes} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {existsSync, openSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Bridge, findBuild} from '../bridge/bridge.ts';
@@ -86,9 +86,11 @@ export class Studio {
         return `No Circuit Studio page connected. Open this link in the browser, then run studio open again:\n${this.bridge.pageUrl}`;
       }
     }
+    const opened = !this.baseline;
     const summary = await this.bridge.call<{components: number; wires: number}>('openProject', [readFileSync(file, 'utf8')]);
     this.baseline = snapshot(await this.bridge.call<Placed>('getProject'));
-    return `Opened .circuitstudio/project.c3dproj in Circuit Studio: ${summary.components} parts, ${summary.wires} wires.`;
+    return `${opened ? 'Opened' : 'Reloaded'} .circuitstudio/project.c3dproj in the connected Circuit Studio page: `
+      + `${summary.components} parts, ${summary.wires} wires.`;
   }
 
   /** Writes the parts the user moved and the routes they reshaped in the page into the project file. */
@@ -164,8 +166,21 @@ async function request(state: StudioState, action: string, body: object = {}): P
   return answer.text!;
 }
 
+/** The review process's own files never belong in git: `.circuitstudio/.gitignore` says so, once. */
+function ignoreRuntimeFiles(root: string): void {
+  const file = kitPath(root, '.gitignore');
+  const wanted = ['studio.json', 'studio.log'];
+  const lines = existsSync(file) ? readFileSync(file, 'utf8').split('\n')
+    : ['# Written by the Circuit Studio agent kit: files of its review process.'];
+  const missing = wanted.filter(name => !lines.includes(name));
+  if (!missing.length) return;
+  mkdirSync(kitPath(root, ''), {recursive: true});
+  writeFileSync(file, `${[...lines.filter(Boolean), ...missing].join('\n')}\n`);
+}
+
 /** Starts the background process for the project, detached, logging to `.circuitstudio/studio.log`. */
 async function launch(root: string, source: StudioSource): Promise<StudioState> {
+  ignoreRuntimeFiles(root);
   const logFile = openSync(kitPath(root, 'studio.log'), 'w');
   const args = [CLI, 'studio', 'start', ...(source.from ? ['--from', source.from] : []), ...(source.url ? ['--url', source.url] : [])];
   spawn(process.execPath, args, {cwd: root, detached: true, stdio: ['ignore', logFile, logFile]}).unref();
