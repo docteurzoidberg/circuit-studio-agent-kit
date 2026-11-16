@@ -31,6 +31,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D10 | Upstream changes to propose: F1 automation API, F2 video settings in the project, F4 model references from `modelId`. Dropped or moved elsewhere: F3, F5, F6, F7, F8, F9, F10 (see [docs/feasibility-results.md](docs/feasibility-results.md)). |
 | D11 | Our package includes a **part converter**: STEP to `.c3dcomponent` (simplification, colour rules, contact measurement, light GLB). |
 | D12 | STEP engine for the converter: Python + CadQuery first; evaluate WASM when packaging for `npx`. Plans: [docs/tool-changes-plan.md](docs/tool-changes-plan.md) (order: base-path assets, model references, presentation in project, automation API) and [docs/part-converter-plan.md](docs/part-converter-plan.md). |
+| D13 | The skills offer to record, in a **`.circuitstudio/` folder at the root of the user's project**, the steps of the kit's integration and the generated files that only Circuit Studio or the kit use afterwards. The user decides whether to commit it, depending on its content. The wiring document itself stays where the user chose (the skill always asks). Content to be defined (open question 6). |
 | D9 | Circuit Studio access: the local clone with the Vite dev server for the spike; target is a pinned build of the fork with an automation API, bundled in the npm package. The hosted site is a fallback only. |
 
 ## Architecture
@@ -167,10 +168,12 @@ Last update: 2026-11-16. Resume from here.
 2. **Propose the next changes** once the maintainer has reacted to #2 and #4: Presentation in project (texts in
    [docs/upstream-drafts/presentation.md](docs/upstream-drafts/presentation.md)), then the Automation API
    (draft texts to write).
-3. **Phase 3, document format**: first version done, [schema/wiring.schema.json](schema/wiring.schema.json)
-   and the Claudemètre example resolved into `wiring.json`; examples/claudemetre/wiring.md serves as the
-   template. Remaining: the skill's reading instructions (pin resolution through the part pins and aliases,
-   questions with line numbers) and the CLI `check` (schema, part and pin cross-references, stale hash).
+3. **Phase 3, document format**, in the order a user meets it: (a) `wiring-plan` writes `wiring.md` from the
+   project's sources — first version in [skills/wiring-plan/](skills/wiring-plan/) with its template, tested
+   by a fresh agent on a local copy of the Claudemètre, being refined; (b) resolution into `wiring.json` —
+   [schema/wiring.schema.json](schema/wiring.schema.json), the showcase example
+   [examples/claudemetre/](examples/claudemetre/) (finished build) and a draft (`resolve.md`), revisited after
+   the parts; (c) the CLI `check` (schema, part and pin cross-references, stale hash).
 4. **Phase 4, part converter**: `part inspect` and `part convert` per
    [docs/part-converter-plan.md](docs/part-converter-plan.md), starting from `spike/prepare_parts.py`.
 5. **Phase 5, project builder**: Markdown to `.c3dproj` with clean routing, layout hints, automatic placement
@@ -194,10 +197,15 @@ Last update: 2026-11-16. Resume from here.
 ## Open questions
 
 1. Package name, and npm package versus Claude Code plugin (or both).
-2. Where the template and the parts live in a user project (`docs/wiring.md`, `wiring/parts/`?).
+2. ~~Where the wiring document lives~~ — `wiring-plan` always asks the user; tool-only files go to
+   `.circuitstudio/` (D13). Where the prepared parts live is part of question 6.
 3. ~~How the CLI gets Circuit Studio~~ — answered by D9.
 4. Quality of automatic 3D layout on a real circuit; how much manual placement is acceptable.
 5. Parts stacked on others (a board plugged onto a terminal adapter) and inline parts (a diode in series).
+6. Content of `.circuitstudio/` (D13). Proposed: `wiring.json` (only the kit reads it). Candidates: an
+   integration log (steps done, choices made, what `init` installed, which `uninstall` reads), the prepared parts (`.c3dcomponent` + light GLB), the
+   generated `.c3dproj`, preview frames. To settle per file: committed or not (`wiring.json` must be committed
+   for rendering without Claude; parts derived from third-party STEP files may not be publishable).
 
 ## Risks
 
