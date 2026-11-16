@@ -97,7 +97,7 @@ Commands (one npm package, name still to be chosen), kept up to date as the proj
 | `npx <name> wiring [--wires]` | `wiring-project` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, document unchanged since; `--wires` lists every wire as written and as resolved | Written ([tools/wiring/](tools/wiring/)) |
 | `npx <name> build` | `wiring-project` | Generates or updates `.circuitstudio/project.c3dproj`: places the parts, routes every wire with Circuit Studio's own planner, keeps the edits made in Circuit Studio | Written ([tools/project/](tools/project/)); needs a local Circuit Studio checkout for now |
 | `npx <name> studio open\|sync\|status\|stop` | `wiring-project` | The project in Circuit Studio for the review: opens the link in the browser, loads the project (again after each build), writes the owner's edits back; a background process the page connects to | Written ([tools/studio/](tools/studio/), [tools/bridge/](tools/bridge/)); needs a Circuit Studio with the kit's bridge (the fork for now) |
-| `npx <name> render` | `wiring-video` | Renders the project: MP4, WebP and poster into `.circuitstudio/media/` (`--out` to choose) | Planned |
+| `npx <name> render` | `wiring-video` | Renders the project in the connected Circuit Studio page: the MP4 into `.circuitstudio/media/`; a poster image or an animated WebP on request | Planned |
 
 The commands follow the skills, in the order a user meets them; the skills call them, and they also work
 without Claude (hooks, CI). Every command works on the project's `.circuitstudio/` folder, found from the current
@@ -145,7 +145,7 @@ The skills are used in this order; each starts from what the previous one produc
 | `wiring-plan` | Writes the wiring document from the project's sources, or by interviewing the owner, and reviews it with them until they validate it | **Implemented** (first version, being refined): [user guide](docs/user-guide/skills/wiring-plan.md), [skills/wiring-plan/](skills/wiring-plan/) |
 | `wiring-parts` | Gives every part of the document a 3D model Circuit Studio can show, with its pins at the right places | **Implemented** (first version, tested on the Claudemètre: catalog parts, STEP models in the project, stand-ins): [user guide](docs/user-guide/skills/wiring-parts.md), [skills/wiring-parts/](skills/wiring-parts/); online search and modelling come next |
 | `wiring-project` | Resolves the document into `wiring.json`, then generates the Circuit Studio project (placement, wire routes, camera) and reviews it with the owner until they validate it, keeping their manual edits from the editor | **Implemented** (first version: resolution, build and review in Circuit Studio by hand; [user guide](docs/user-guide/skills/wiring-project.md), [skills/wiring-project/](skills/wiring-project/), [schema](schema/wiring.schema.json), [example](examples/claudemetre/wiring.json)); preview images and presentation texts come with the rendering |
-| `wiring-video` | Renders the validated project into the video, WebP and poster, and helps the owner set up their own automation | **Planned** |
+| `wiring-video` | Renders the validated project into the video, right after `wiring-project` while the page is connected; then offers a poster image, an animated WebP for a README and the owner's own automation, as they need them | **Planned** |
 
 The command line holds the logic the skills call (commands above). They are written in TypeScript
 (D17); the part tools were first written in Python (removed, D19), and their tests still check the outputs that
