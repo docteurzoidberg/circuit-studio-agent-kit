@@ -65,9 +65,13 @@ flowchart TD
   routes: 16 wires, none blocked (1.5 s)
   ```
 
-- **You check it in Circuit Studio**: open `.circuitstudio/project.c3dproj` there (your local copy or the hosted
-  site; the file stays in your browser). Ask for changes in words ("put the display above the board"), or move
-  things yourself in the editor, **Save**, and put the saved file in place of the project. Every later build keeps
+- **You check it in Circuit Studio.** When the kit reaches Circuit Studio (see
+  [How the kit reaches Circuit Studio](../../../README.md#how-the-kit-reaches-circuit-studio)), the skill asks
+  whether to open the project, opens it in your browser and reloads it after every build; what you move in the
+  editor is read back by itself. Otherwise you open `.circuitstudio/project.c3dproj` there yourself (your local
+  copy or the hosted site; the file stays in your browser), **Save**, and put the saved file in place of the
+  project. Ask for changes in words ("put the display above the board"), or move things yourself in the editor.
+  Every later build keeps
   what you moved, the wire shapes you changed and your camera, until you ask to give a part back to the automatic
   or *Layout* placement; what you never touched is placed again, so a new *Layout* hint in the document still
   applies. When a move blocks a wire, the skill tries a few others before asking you. Wiring changes (a pin, a

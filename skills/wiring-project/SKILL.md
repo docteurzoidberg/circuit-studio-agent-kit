@@ -29,6 +29,10 @@ Talk to the user in their language. Everything written to files is in English.
 | `<kit> wiring [--wires] [--json]` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, and whether the document changed since; exit code 1 and one line per problem, with the document line. `--wires` also lists every wire as written and as resolved |
 | `<kit> build [--move "<part>=x,y[,rotation]"]... [--reset <part>]... [--dry-run] [--from <folder>] [--json]` | Generates `.circuitstudio/project.c3dproj` from `wiring.json` and the parts; places the parts, plans every route with Circuit Studio's planner, keeps the user's edits; exit code 1 when wires stay blocked. `--move` places a part as the user asks (kept like an edit), `--reset` gives a part back to build, `--dry-run` writes nothing |
 
+**MCP tools** of the kit (when its MCP server is registered; step 5): `studio_status` (is a Circuit Studio page
+connected, the link that opens one), `studio_open` (opens the project in the page, opening the link in the
+user's browser first when needed), `studio_sync` (writes the user's edits made in the page into the project file).
+
 **The user only sees your messages when you stop.** Ask all your questions in one message.
 
 ## 1. Check the inputs
@@ -83,25 +87,45 @@ part and how it was placed, then the routes:
 
 ## 5. Review
 
-The user checks the project loaded in Circuit Studio itself (no preview of the kit replaces it). Tell them how,
-in one message, with the build's summary (parts and how they were placed, routes):
+The user checks the project loaded in Circuit Studio itself (no preview of the kit replaces it). How it gets
+there depends on how the kit reaches Circuit Studio (D23), which `init` set up:
 
-- Open Circuit Studio: their local copy, or the hosted site `https://arslansadiq87.github.io/circuit-studio/`
-  (everything runs in their browser; the file is not uploaded anywhere). **Open**, then
-  `.circuitstudio/project.c3dproj`.
+- **Connected**: the kit's MCP tools (`studio_status`, `studio_open`, `studio_sync`) are available and
+  `studio_status` names a Circuit Studio. The Circuit Studio page connects to the kit and the kit opens the
+  project in it; the user only looks and edits, nothing to open or save by hand.
+- **Manual**: no such tools, or `studio_status` says no Circuit Studio is configured. Say once that without a
+  Circuit Studio that has the kit's bridge on this machine (the kit's fork, until the author's version has it),
+  the kit can load the project neither for the review nor for the video: the user opens and saves it themselves.
+
+**Opening it.** In one message, with the build's summary (parts and how they were placed, routes):
+
+- *Connected*: ask whether to open the project in Circuit Studio (it opens a tab in their browser, or reuses the
+  one already connected). On yes, call `studio_open`. When it answers with a link instead (no page connected in
+  time), give the user that link and call `studio_open` again once they have opened it.
+- *Manual*: their local copy, or the hosted site `https://arslansadiq87.github.io/circuit-studio/` (everything
+  runs in their browser; the file is not uploaded anywhere): **Open**, then `.circuitstudio/project.c3dproj`.
+
+Then, in the same message:
+
 - What to look at: every part there and posed as expected, every wire on the right terminal (the *Connections*
   table lists them), wires easy to follow, nothing overlapping.
-- Two ways to change it:
+- Ways to change it:
   - **in words** ("put the display above the board", "turn the strip"): build with
     `--move "<part name>=x,y[,rotation]"` (the document's part name; mm, top view: x to the right, y away from the
     viewer; degrees around the vertical, counterclockwise seen from above). The build output gives each part's
     current position to start from. Such a move counts as the user's edit and stays.
   - **back to the document's placement or to build's**: `--reset <part name>`. Use it too when a requested move
     only brings a part back to its *Layout* row, so a later change of that row still applies.
-  - **in the editor**: they move parts or reshape wires, **Save**, and put the saved file in place of
-    `.circuitstudio/project.c3dproj`. The next build keeps their positions, rotations, wire shapes and camera.
+  - **in the editor**: they move parts or reshape wires in Circuit Studio. *Connected*: nothing more to do, the
+    kit reads them back. *Manual*: **Save**, and put the saved file in place of `.circuitstudio/project.c3dproj`.
+    Every later build keeps their positions, rotations and wire shapes (and, manual way, their camera).
 - Changes of wiring (a pin, a colour, a part) go into the document, not the project: then resolve and build again
   (steps 2 to 4).
+
+**Connected: keep the page and the file in step.** Call `studio_sync` before every build and before ending the
+review: it writes what the user changed in the page into the project file, where build keeps it. A build without
+it would lose those edits, since the reload replaces the page's project. After every build, call `studio_open`
+again: the page reloads the new project (no new tab).
 
 **Blocked wires**: try a few moves with `--dry-run` first (nothing is written; a build with blocked wires takes
 10 to 15 s): the parts of the blocked wire and their neighbours, a little further out or turned. After about five

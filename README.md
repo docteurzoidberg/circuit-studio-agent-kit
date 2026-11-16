@@ -103,6 +103,38 @@ The commands follow the skills, in the order a user meets them; the skills call 
 without Claude (hooks, CI). Every command works on the project's `.circuitstudio/` folder, found from the current
 folder upwards (as git finds `.git/`), and needs no file name, except `part inspect` and `part convert` (and `part pins`, which takes part identifiers).
 
+## How the kit reaches Circuit Studio
+
+Circuit Studio runs in a web page, and its 3D view and its video export only exist there. Rather than launching
+and remote-controlling a browser, the kit lets **the Circuit Studio page connect to it**:
+
+```mermaid
+sequenceDiagram
+  participant K as Kit (MCP server, started by the agent)
+  participant P as Circuit Studio page (your browser)
+  Note over K: listens on 127.0.0.1 (this machine only)
+  K->>P: opens the link in your browser (once, after asking)
+  P->>K: connects, with the token from the link
+  K->>P: open this project
+  Note over P: you look, move parts, reshape wires
+  K->>P: give me the project back
+  P-->>K: your edits, kept by the next build
+  K->>P: render the video
+  P-->>K: the MP4
+```
+
+- **The page does the work**, through Circuit Studio's automation API, from the inside: open a project, read it
+  back, render. The kit only sends requests; it drives no browser and touches no interface.
+- **One thing running**: the bridge lives in the kit's MCP server, which the agent starts with the session. You
+  only open the page (or let the kit open the link); a page left open reconnects by itself.
+- **Safe by default**: the page connects only when its link asks for it (`#bridge=ws://127.0.0.1:<port>&token=…`),
+  only to this machine, and the kit accepts only Circuit Studio's origin with its token.
+- **Which Circuit Studio**: the bridge and the automation API are proposed to Circuit Studio's author. Until he has
+  them, the page is a build of the kit's fork served from your machine. Without one, you open and save the project
+  yourself, and neither loading nor rendering can be automated. `init` asks which you want.
+- **Without anyone at the keyboard** (CI): the command line runs the same bridge and starts a headless Chrome on
+  the link; the page connects the same way.
+
 ## Skills
 
 The skills are used in this order; each starts from what the previous one produced.
