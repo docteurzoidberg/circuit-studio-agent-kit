@@ -11,7 +11,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "CIRCUIT_STUDIO_KIT_NO_BROWSER=1 node --test tools/catalog/*.test.ts tools/parts/*.test.ts tools/wiring/*.test.ts tools/project/*.test.ts tools/bridge/*.test.ts",
+    "test": "CIRCUIT_STUDIO_KIT_NO_BROWSER=1 node --test tools/catalog/*.test.ts tools/parts/*.test.ts tools/wiring/*.test.ts tools/project/*.test.ts tools/bridge/*.test.ts tools/video/*.test.ts",
     "typecheck": "tsc -p ."
   },
   "dependencies": {

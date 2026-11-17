@@ -3,13 +3,15 @@
 //   settings    Circuit Studio's video settings (the Auto Video dialog's), chosen once: its defaults, set in the
 //               page (then read back by `studio sync`), or answered in the chat (`video settings key=value`)
 //   scenes      the camera scenes saved in the page, kept with the settings
-//   outputs     what `render` writes besides the video, chosen after the first one (D26): a poster image
+//   outputs     what `render` writes besides the video, chosen after the first one (D26): a poster image, an
+//               animated WebP for a README
 //   automation  later: how the video is rendered again without the user (CI, hook)
 //
 // A missing section means "not chosen yet": the skill asks when it gets there. `render` passes `settings` to the
 // page, so the same file gives the same video on any machine, whatever Circuit Studio's defaults become; `build`
 // copies them into the project, so the page's Auto Video dialog shows them.
-import {existsSync, readFileSync, writeFileSync} from 'node:fs';
+import {existsSync, readdirSync, readFileSync, statSync, writeFileSync} from 'node:fs';
+import {join} from 'node:path';
 import {kitPath} from '../project.ts';
 
 export type VideoSettings = Record<string, unknown>;
@@ -17,7 +19,7 @@ export type VideoSettings = Record<string, unknown>;
 export interface VideoFile {
   settings?: VideoSettings;
   scenes?: unknown[];
-  outputs?: {poster?: boolean};
+  outputs?: {poster?: boolean; webp?: boolean};
   automation?: unknown;
 }
 
@@ -85,4 +87,17 @@ export function describeChoices(info: VideoSettingsInfo): string {
   lines.push('other settings (numbers, colours, on/off): '
     + Object.keys(info.settings).filter(k => !(k in info.choices) && k !== 'version' && k !== 'overrides').join(', '));
   return lines.join('\n');
+}
+
+/** The latest video in `.circuitstudio/media/`, for the extras made after it. */
+export function latestVideo(media: string): string | undefined {
+  if (!existsSync(media)) return undefined;
+  return readdirSync(media).filter(f => /\.(mp4|webm)$/.test(f))
+    .sort((a, b) => statSync(join(media, b)).mtimeMs - statSync(join(media, a)).mtimeMs)[0];
+}
+
+/** One line: what `render` writes besides the video. */
+export function describeOutputs(outputs: VideoFile['outputs']): string {
+  if (!outputs) return 'not chosen yet';
+  return `poster ${outputs.poster ? 'on' : 'off'}, WebP ${outputs.webp ? 'on' : 'off'}`;
 }

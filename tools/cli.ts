@@ -3,6 +3,7 @@
 // command works on the project's `.circuitstudio/` folder (tools/project.ts), except `part inspect` and
 // `part convert`, which take the file they work on.
 import {existsSync, readFileSync} from 'node:fs';
+import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
 import {catalog, describe, type CatalogOptions} from './catalog/catalog.ts';
@@ -10,7 +11,8 @@ import {convertCommand, inspectCommand, type PartOptions} from './parts/commands
 import {kitPath, projectRoot} from './project.ts';
 import {build, formatBuild} from './project/build.ts';
 import {runStudio, studioCommand} from './studio/studio.ts';
-import {describeSettings, parseAssignments, readVideo, VIDEO_FILE, writeVideo} from './video/video.ts';
+import {describeOutputs, describeSettings, latestVideo, parseAssignments, readVideo, VIDEO_FILE, writeVideo} from './video/video.ts';
+import {makeWebp} from './video/webp.ts';
 import {checkWiring, formatReport} from './wiring/check.ts';
 import {formatPins, PartLibrary} from './wiring/pins.ts';
 
@@ -60,14 +62,17 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
   video settings [--defaults] [preset=<name>] [<key>=<value>]...
       saves the video settings into video.json, checked by the connected page: Circuit Studio's
       defaults, a preset, or changes on top of the saved ones; without arguments, shows them
-  video outputs poster=on|off
+  video outputs [poster=on|off] [webp=on|off]
       what render writes besides the video, from now on
   video poster
       writes the poster image now (a still of the camera view), without rendering the video again
-  render [--poster] [--no-browser] [--wait <s>]
+  video webp
+      writes the animated WebP of the latest video now (for a README; needs ffmpeg)
+  render [--poster] [--webp] [--no-browser] [--wait <s>]
       renders the video in the connected Circuit Studio page (opening it first when needed): saves the
       user's edits, reloads the project, writes the MP4 into .circuitstudio/media/; --poster also writes
-      a still of the camera view
+      a still of the camera view, --webp an animated WebP of the video (needs ffmpeg); without them, the
+      extras video.json's outputs ask for
   studio start [--from <build> | --url <site>]
       runs the background process in the foreground (studio open starts it by itself)
 
@@ -78,12 +83,13 @@ const OPTIONS = {
   from: {type: 'string'}, download: {type: 'boolean'}, ref: {type: 'string'}, force: {type: 'boolean'},
   wires: {type: 'boolean'}, reset: {type: 'string', multiple: true}, move: {type: 'string', multiple: true},
   'dry-run': {type: 'boolean'}, url: {type: 'string'}, 'no-browser': {type: 'boolean'}, wait: {type: 'string'},
-  poster: {type: 'boolean'}, defaults: {type: 'boolean'},
+  poster: {type: 'boolean'}, webp: {type: 'boolean'}, defaults: {type: 'boolean'},
   help: {type: 'boolean', short: 'h'},
 } as const;
 
 type Options = CatalogOptions & PartOptions & {help?: boolean; wires?: boolean; reset?: string[]; move?: string[];
-  'dry-run'?: boolean; url?: string; 'no-browser'?: boolean; wait?: string; poster?: boolean; defaults?: boolean};
+  'dry-run'?: boolean; url?: string; 'no-browser'?: boolean; wait?: string; poster?: boolean; webp?: boolean;
+  defaults?: boolean};
 
 /** Where the command line runs and writes (the tests give their own). */
 export interface Io {
@@ -151,7 +157,7 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
       if (args.length) throw new UsageError('render takes no argument');
       const wait = options.wait === undefined ? undefined : Number(options.wait);
       out(await studioCommand(projectRoot(cwd), 'render', {from: options.from, url: options.url,
-        browser: !options['no-browser'], wait, poster: options.poster}, line => err(line)));
+        browser: !options['no-browser'], wait, poster: options.poster, webp: options.webp}, line => err(line)));
       return 0;
     }
     if (command === 'video') {
@@ -160,18 +166,30 @@ export async function main(argv: string[], {cwd = process.cwd(), out = console.l
       if (action === undefined) {
         const video = readVideo(root);
         out([`settings: ${video.settings ? describeSettings(video.settings) : 'not chosen yet'}`,
-          `outputs: ${video.outputs ? `poster ${video.outputs.poster ? 'on' : 'off'}` : 'not chosen yet'}`,
+          `outputs: ${describeOutputs(video.outputs)}`,
           `automation: ${video.automation ? JSON.stringify(video.automation) : 'none'}`].join('\n'));
         return 0;
       }
       if (action === 'outputs') {
-        const {poster, ...other} = parseAssignments(rest);
-        if (Object.keys(other).length || typeof poster !== 'boolean') throw new UsageError('video outputs takes poster=on|off');
-        writeVideo(root, {...readVideo(root), outputs: {poster}});
-        out(`Saved into ${VIDEO_FILE}: render writes ${poster ? 'a poster image besides the video' : 'the video only'}.`);
+        const {poster, webp, ...other} = parseAssignments(rest);
+        const flags = {poster, webp};
+        if (Object.keys(other).length || !rest.length || Object.values(flags).some(v => v !== undefined && typeof v !== 'boolean')) {
+          throw new UsageError('video outputs takes poster=on|off and/or webp=on|off');
+        }
+        const video = readVideo(root);
+        const outputs = {...video.outputs, ...Object.fromEntries(Object.entries(flags).filter(([, v]) => v !== undefined))};
+        writeVideo(root, {...video, outputs});
+        out(`Saved into ${VIDEO_FILE}: besides the video, render writes ${describeOutputs(outputs)}.`);
         return 0;
       }
-      if (!['choices', 'settings', 'poster'].includes(action)) throw new UsageError('video takes one of: choices, settings, outputs, poster');
+      if (action === 'webp') {
+        const media = kitPath(root, 'media');
+        const latest = latestVideo(media);
+        if (!latest) throw new Error('no video in .circuitstudio/media/ yet: run render first');
+        out(await makeWebp(join(media, latest)));
+        return 0;
+      }
+      if (!['choices', 'settings', 'poster'].includes(action)) throw new UsageError('video takes one of: choices, settings, outputs, poster, webp');
       const wait = options.wait === undefined ? undefined : Number(options.wait);
       out(await studioCommand(root, `video-${action}`, {from: options.from, url: options.url, browser: !options['no-browser'],
         wait, args: rest, defaults: options.defaults}));

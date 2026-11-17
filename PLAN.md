@@ -257,8 +257,11 @@ Last update: 2026-11-16. Resume from here.
       `init` offers the local build or the manual way.
    3. `render` on the same bridge: the MP4 first, poster and WebP on request (D26) — `render` and `--poster`
       written on 2026-11-17 and checked on the Claudemètre in the owner's browser (1920 × 1080, 30 fps, 57 s,
-      14.5 MB, rendered in 144 s); the page shows API renders in its own progress panel. Next: the WebP, the
-      `wiring-video` skill, then headless Chrome for CI after measuring a render on a GitHub runner.
+      14.5 MB, rendered in 144 s); the page shows API renders in its own progress panel. The animated WebP
+      (`render --webp`, `video webp`, `video outputs webp=on`) added on 2026-11-17: converted by the kit with
+      ffmpeg when the machine has it (Circuit Studio encodes MP4, WebM and PNG only), 640 px wide at 12 fps, 0.9 MB
+      for a 59 s render, in 29 s. Next: the `wiring-video` skill tested by a fresh agent, then headless Chrome for
+      CI after measuring a render on a GitHub runner.
 7. **Configurable parts** (D28), when a real project has capacitors or diodes: catalog entries for Circuit
    Studio's capacitor and diode, their settings in `wiring.json` (schema, `wiring-parts`), written by `build` into the
    part's `capacitor` or `diode` block.

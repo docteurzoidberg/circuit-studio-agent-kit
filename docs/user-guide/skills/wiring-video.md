@@ -34,7 +34,7 @@ flowchart TD
   S -- yes --> R
   V --> R[render: the page plays and encodes<br/>the wiring, the kit writes the MP4]
   R --> X{Extras chosen?}
-  X -- not yet --> E[A poster image too?<br/>kept in video.json]
+  X -- not yet --> E[A poster image, a WebP too?<br/>kept in video.json]
   X -- yes --> REP[Report]
   E --> REP
 ```
@@ -49,7 +49,9 @@ flowchart TD
 - **You see it happen.** The page shows the render's progress and a **Cancel video** button. Leave the tab alone
   until it ends: reloading or closing it stops the render (run it again once the page is back).
 - **Extras after the video.** Once, after the first video, the skill asks whether you also want a poster image
-  (a still of the camera view, for a README); the answer is kept too.
+  (a still of the camera view) and an animated WebP (the video, small, for a README on GitHub, which does not play
+  an MP4 inline; it needs ffmpeg with its WebP encoder); the answers are kept too. A 59 s video in 1080p gives a
+  WebP of 0.9 MB (640 px wide, 12 fps), made in about 30 s.
 
 ```text
 Settings: mode tutorial, 1920 × 1080, 30 fps, mp4, background dark-studio, HUD futuristic, labels minimal, wire 1.6 s + hold 0.7 s (from .circuitstudio/video.json).

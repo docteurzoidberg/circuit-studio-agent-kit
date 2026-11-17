@@ -13,7 +13,7 @@
 // different from the page's token (which the page's link shows).
 import {randomBytes} from 'node:crypto';
 import {spawn} from 'node:child_process';
-import {existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, openSync, readFileSync, rmSync, statSync, writeFileSync} from 'node:fs';
 import {basename, dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Bridge, findBuild} from '../bridge/bridge.ts';
@@ -22,7 +22,8 @@ import {openInBrowser} from '../bridge/open.ts';
 import {readConfig, writeConfig} from '../config.ts';
 import {kitPath} from '../project.ts';
 import type {CsProject} from '../project/engine.ts';
-import {checkRequested, describeChoices, describeSettings, parseAssignments, readVideo, VIDEO_FILE, writeVideo,
+import {makeWebp} from '../video/webp.ts';
+import {checkRequested, describeChoices, describeSettings, latestVideo, parseAssignments, readVideo, VIDEO_FILE, writeVideo,
   type VideoSettings, type VideoSettingsInfo} from '../video/video.ts';
 
 type Presentation = {video?: VideoSettings; cameraScenes?: unknown[]; [key: string]: unknown};
@@ -195,6 +196,14 @@ export class Studio {
       + `${result.duration.toFixed(1)} s, ${result.frames} frames, in ${Math.round((Date.now() - started) / 1000)} s.`);
     for (const warning of result.warnings) told.push(`warning: ${warning}`);
     if (options.poster ?? video.outputs?.poster) told.push(await this.writePoster(name.replace(/\.\w+$/, '')));
+    if (options.webp ?? video.outputs?.webp) {
+      // An extra: when it cannot be made, the video is still there.
+      try {
+        told.push(await makeWebp(output));
+      } catch (error) {
+        told.push(`warning: no WebP: ${(error as Error).message}`);
+      }
+    }
     return told.filter(line => !line.startsWith('No edit')).join('\n');
   }
 
@@ -204,9 +213,7 @@ export class Studio {
       const opened = await this.open(options);
       if (!this.bridge.connected) throw new Error(opened);
     }
-    const media = dirname(kitPath(this.root, 'media/video', {create: true}));
-    const latest = readdirSync(media).filter(f => /\.(mp4|webm)$/.test(f))
-      .sort((a, b) => statSync(join(media, b)).mtimeMs - statSync(join(media, a)).mtimeMs)[0];
+    const latest = latestVideo(dirname(kitPath(this.root, 'media/video', {create: true})));
     return this.writePoster(latest ? latest.replace(/\.\w+$/, '') : 'poster');
   }
 
@@ -224,6 +231,8 @@ export class Studio {
 export interface RenderOptions {
   /** Also write a poster image (a still of the camera view); by default, as video.json's outputs say (D26). */
   poster?: boolean;
+  /** Also write an animated WebP of the video (ffmpeg); by default, as video.json's outputs say (D26). */
+  webp?: boolean;
   browser?: boolean;
   wait?: number;
 }
@@ -351,6 +360,6 @@ export async function studioCommand(root: string, action: string,
     if (!['open', 'render', 'video-choices', 'video-settings', 'video-poster'].includes(action)) throw new Error('studio is not running: run studio open first');
     state = await launch(root, options);
   }
-  return request(state, action, {browser: options.browser, wait: options.wait, poster: options.poster, args: options.args,
+  return request(state, action, {browser: options.browser, wait: options.wait, poster: options.poster, webp: options.webp, args: options.args,
     defaults: options.defaults}, progress);
 }

@@ -1,6 +1,6 @@
 ---
 name: wiring-video
-description: Render the wiring video of a validated Circuit Studio project (.circuitstudio/project.c3dproj) in the Circuit Studio page connected to the kit - choosing the video settings once per project (Circuit Studio's defaults, set in the page, or answered in the chat) and keeping them in .circuitstudio/video.json, rendering the MP4 into .circuitstudio/media/, then offering the extras once (a poster image). Fourth and last step of a wiring video, after wiring-plan, wiring-parts and wiring-project. Use when the user wants the video of their wiring made or made again, or wants its settings changed.
+description: Render the wiring video of a validated Circuit Studio project (.circuitstudio/project.c3dproj) in the Circuit Studio page connected to the kit - choosing the video settings once per project (Circuit Studio's defaults, set in the page, or answered in the chat) and keeping them in .circuitstudio/video.json, rendering the MP4 into .circuitstudio/media/, then offering the extras once (a poster image, an animated WebP for a README). Fourth and last step of a wiring video, after wiring-plan, wiring-parts and wiring-project. Use when the user wants the video of their wiring made or made again, or wants its settings changed.
 ---
 
 # wiring-video
@@ -32,9 +32,10 @@ Talk to the user in their language. Everything written to files is in English.
 | `<kit> video` | What `video.json` holds: settings, outputs, automation ("not chosen yet" for a missing one) |
 | `<kit> video choices` | Circuit Studio's video presets and the allowed values of its settings (asks the page) |
 | `<kit> video settings [--defaults] [preset=<name>] [key=value]...` | Saves the settings into `video.json`, checked by the page (a refused value is an error naming the allowed ones), and shows them in the page; `--defaults` takes Circuit Studio's defaults |
-| `<kit> video outputs poster=on\|off` | Saves what `render` writes besides the video |
+| `<kit> video outputs [poster=on\|off] [webp=on\|off]` | Saves what `render` writes besides the video (one or both, the other kept) |
 | `<kit> video poster` | Writes the poster image now (a still of the camera view), named after the latest video, without rendering again |
-| `<kit> render [--poster]` | Saves the user's edits, reloads the project in the page and renders the video there with `video.json`'s settings into `.circuitstudio/media/`; progress lines on stderr; the poster too when the outputs say so |
+| `<kit> video webp` | Writes the animated WebP of the latest video now (640 px wide, 12 fps; ffmpeg with libwebp), without the page |
+| `<kit> render [--poster] [--webp]` | Saves the user's edits, reloads the project in the page and renders the video there with `video.json`'s settings into `.circuitstudio/media/`; progress lines on stderr; the poster and the WebP too when the outputs say so |
 | `<kit> studio stop` | Ends the background process |
 
 **The user only sees your messages when you stop.** Ask all your questions in one message.
@@ -91,16 +92,23 @@ Give its result lines: the settings and where they came from, the file, its size
 ## 5. Extras, once (D26)
 
 The video comes first; the extras are offered after it, once, according to what the user wants the video for.
-When `<kit> video` says the outputs are not chosen yet, ask whether they also want a **poster image** (a still
-of the camera view, for a README or a page that cannot play a video). On yes, `<kit> video poster` writes it now
-(no second render). Save the answer with `<kit> video outputs poster=on|off`: later renders make it or not
-without asking. An animated WebP for a README is planned, not available yet: say so if they ask.
+When `<kit> video` says the outputs are not chosen yet, ask in one question whether they also want:
+
+- a **poster image**: a still of the camera view, for a page that cannot play a video;
+- an **animated WebP**: the video, small (about 1 MB a minute), that a README on GitHub plays inline where it
+  does not play an MP4. It needs ffmpeg with its WebP encoder on the machine.
+
+Make what they want now, without a second render: `<kit> video poster`, `<kit> video webp`. Save the answers with
+`<kit> video outputs poster=on|off webp=on|off`: later renders make them or not without asking. When `video webp`
+says ffmpeg (or its WebP encoder) is missing, tell the user what to install, offer to save `webp=off`, and never
+install anything yourself. A failed WebP never fails the render: `render` gives a warning line and the video is
+there.
 
 ## 6. Report
 
 In a few lines:
 
-- the files in `.circuitstudio/media/` (video, poster) with their size;
+- the files in `.circuitstudio/media/` (video, poster, WebP) with their size;
 - the settings used and that they are kept in `.circuitstudio/video.json`, with the ways to change them;
 - **committing**: `video.json` is meant to be committed (small; it is what makes the next render, or a CI job's,
   give the same video). The videos in `media/` are large: check what git ignores
