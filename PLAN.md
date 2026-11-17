@@ -50,6 +50,7 @@ The tooling is generic: it must work on any project and adapt to the tools insta
 | D25 | **No MCP server** (2026-11-16): the skills hold the instructions and the command line the actions, so MCP tools copying the commands would only duplicate them; the one thing an MCP server would have brought, a process that lives through the review to hold the bridge (D23), is a background process of the command line instead: `studio open` starts it when needed, `studio sync`, `status` and `stop` talk to it over 127.0.0.1 with a control token kept in `.circuitstudio/studio.json`. Nothing to register nor restart, any agent that runs commands can use it, and CI uses the same code. Supersedes the MCP parts of D5, D8 and the first version of D23. An MCP server may come back later as an optional remote access (see Open questions), wrapping the same commands. |
 | D26 | **The video first, extras on request** (2026-11-16): `render` makes the MP4 (or WebM when the browser cannot encode H.264) and nothing else by default. A poster image (a still for a README), a light animated WebP (a README on GitHub does not play an MP4 inline) and automation (CI, hook) are offered by `wiring-video` after the render, according to what the user wants the video for; `render` makes them only on explicit options. Once the user validates, `wiring-project` offers to go on to `wiring-video`; on yes the page stays connected for it, on no the kit stops `studio`. |
 | D27 | **Each skill keeps its setup in its own file** (2026-11-17): what a skill asked once is kept, so running it again resumes without asking. `wiring-plan` has `wiring.md`, `wiring-parts` the `parts/` folders, `wiring-project` `wiring.json` (only what the document says: parts, connections, placement hints) and `build.json`; `wiring-video` gets `.circuitstudio/video.json`: Circuit Studio's video settings and camera scenes, the outputs besides the video, later the automation. A missing section means not chosen yet: on the first render the user picks Circuit Studio's defaults, sets them in the page (read back by `studio sync`) or answers questions in the chat (`video settings`, checked by the page's `videoSettings()`). `render` passes them to the page, so the same file gives the same video anywhere (CI included) and does not depend on the project file storing them (#6); `build` copies them into the project for the page's dialog. |
+| D28 | **Circuit Studio's configurable parts wait for a project that needs them** (2026-11-17): the electrolytic capacitor (`a355a83`) and the diode (`75f8212`) are drawn by Circuit Studio's code from settings kept in the part (value, voltage, package, diode model), made by factory functions, not `*_COMPONENT` constants, so the catalog does not list them and a project's capacitors and diodes stay stand-ins. Later, when a real project has some: list them in the catalog and let `wiring.json` carry their settings, which `build` writes into the part's `capacitor` or `diode` block, so the video shows the document's marking (100 µF / 25 V, 1N4007) instead of the defaults; this changes the schema and `wiring-parts`. Listing them with their defaults only was set aside: the video would show values the document does not have. |
 
 ## Architecture
 
@@ -258,7 +259,10 @@ Last update: 2026-11-16. Resume from here.
       written on 2026-11-17 and checked on the Claudemètre in the owner's browser (1920 × 1080, 30 fps, 57 s,
       14.5 MB, rendered in 144 s); the page shows API renders in its own progress panel. Next: the WebP, the
       `wiring-video` skill, then headless Chrome for CI after measuring a render on a GitHub runner.
-7. Then phases 7 and 8 below.
+7. **Configurable parts** (D28), when a real project has capacitors or diodes: catalog entries for Circuit
+   Studio's capacitor and diode, their settings in `wiring.json` (schema, `wiring-parts`), written by `build` into the
+   part's `capacitor` or `diode` block.
+8. Then phases 7 and 8 below.
 
 ## Phases
 
