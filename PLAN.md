@@ -273,9 +273,9 @@ Last update: 2026-11-16. Resume from here.
    routing, merge with manual edits; the `wiring-project` skill.
 6. **Bridge and rendering** — the Circuit Studio page connects to the kit (D23, D25): live review of the
    project, then `render` with MP4, WebP and poster outputs.
-7. **Skills and packaging** — `wiring-video` (`wiring-plan` is done in phase 3, `wiring-parts` in phase 4,
-   `wiring-project` in phase 5); packaging, `init` (with the choice of D23) and
-   `uninstall`.
+7. **Skills and packaging** — `wiring-video` written on 2026-11-17 (all the video steps moved out of
+   `wiring-project`, which offers to go on with it; to test with a fresh agent); packaging, `init` (with the
+   choice of D23) and `uninstall`.
 8. **Reference project end to end**, then the remaining upstream issues and pull requests.
 
 ## Open questions

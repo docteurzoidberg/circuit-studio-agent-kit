@@ -9,7 +9,7 @@ next steps).
 
 | Path | Content |
 |---|---|
-| `skills/` | Skills, in the order a user meets them: `wiring-plan`, `wiring-parts` (written), `wiring-project` (written), `wiring-video` (planned) |
+| `skills/` | Skills, in the order a user meets them: `wiring-plan`, `wiring-parts` (written), `wiring-project` (written), `wiring-video` (written) |
 | `tools/cli.ts` | The kit's command line (`part catalog`, `part inspect`, `part convert`, `part pins`, `wiring`, `build`, `studio`, `video`, `render` so far) |
 | `tools/catalog/` | Snapshot of the Circuit Studio catalog into the user's `.circuitstudio/catalog.json` |
 | `tools/parts/` | STEP inspection and conversion into Circuit Studio parts (OpenCascade in WebAssembly) |
