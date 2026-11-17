@@ -2,16 +2,13 @@
 
 > **Not published yet.** Fork branch
 > [`feat/automation-api`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (one commit,
-> `8f4db3d` and two local `fixup!` commits, on top of the presentation commit `6e4d7f2` proposed in #6; 7 tests).
+> `b633524`, on upstream `82e4bcd`, whose presentation block it reads; 8 tests).
 >
 > **Before publishing:**
 >
-> 1. Wait for #6 to be settled, then rebase on what lands: if the maintainer merges #6, rebase on `main`; if he
->    implements the presentation block his own way, adapt `resolveVideoSettings()` to his block (or drop that
->    part if there is none).
-> 2. Squash the local `fixup!` commits into the API commit (`65a135c`: projectFiles loaded on demand, found by the
->    end-to-end check below; `1ba2a91`: `planRoutes()`, added on 2026-11-16 for the kit's project builder), then
->    push the fork branch.
+> 1. Rebase on the latest `main` and rerun the tests (`automation-api`, `core` keeps its known failures).
+> 2. Check that the texts below still describe the commit: since 2026-11-16 it also has `videoSettings()` and
+>    shows API renders in the page's own progress panel (with **Cancel video**).
 > 3. Fill in the issue and pull request numbers.
 >
 > **End-to-end check done on 2026-11-16** (fork `8f4db3d` + `65a135c`, `npm run build && npx vite preview`, Chrome

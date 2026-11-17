@@ -1,14 +1,14 @@
 # Bridge to a local automation client (D23): the page connects to a tool on the same machine
 
 > **Not published yet.** Fork branch
-> [`feat/kit-bridge`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/kit-bridge) (commit `4072960`
-> and a local `fixup!` `bb4fb5d`, on top of the automation API branch; 6 tests).
+> [`feat/kit-bridge`](https://github.com/docteurzoidberg/circuit-studio/tree/feat/kit-bridge) (one commit,
+> `7b75c38`, on top of the automation API branch; 6 tests).
 >
 > **Before publishing:**
 >
 > 1. The automation API must be proposed first ([automation-api.md](automation-api.md)): this change only makes
 >    sense on top of it. Rebase on whatever lands there.
-> 2. Squash the `fixup!` commit, push the fork branch.
+> 2. Rebase on the API branch as published.
 > 3. Check with the hosted site (https) what Chrome's and Firefox's local network access prompts look like, and
 >    state it in the pull request (the end-to-end check below was on a build served from the same machine).
 > 4. Fill in the issue and pull request numbers.
