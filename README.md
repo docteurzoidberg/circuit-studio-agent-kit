@@ -196,8 +196,8 @@ WS2812B strip and a 12 V input through an LP-16 socket, a fuse and a Mini360 ste
 wiring, as the `wiring-plan` skill writes it and describing the finished build, is the showcase example
 [examples/claudemetre/wiring.md](examples/claudemetre/wiring.md), with the
 [`.circuitstudio/` folder](examples/claudemetre/.circuitstudio/) a project gets from the kit (what each file is,
-which stay local). The spike's earlier study copy is in
-[spike/reference-project/wiring.md](spike/reference-project/wiring.md).
+which stay local). The spike's earlier study copy is in the repository's history:
+[spike/reference-project/wiring.md](https://github.com/docteurzoidberg/circuit-studio-agent-kit/blob/391a99f/spike/reference-project/wiring.md).
 
 ## Documents
 
@@ -214,9 +214,9 @@ which stay local). The spike's earlier study copy is in
 
 ## Spike scripts
 
-`spike/` holds the feasibility test scripts (not the final tooling): a Markdown wiring parser and project
-builder run in the Circuit Studio page, STEP inspection, part preparation and simplification with CadQuery,
-and a small CORS file server. They expect a local clone of Circuit Studio running on the Vite dev server.
+The feasibility test scripts (a Markdown wiring parser and project builder run in the Circuit Studio page, STEP
+inspection, part preparation and simplification with CadQuery, a small CORS file server) were removed on 2026-11-17,
+once the kit's tools had replaced them; they stay in the history, in [`spike/` at `391a99f`](https://github.com/docteurzoidberg/circuit-studio-agent-kit/tree/391a99f/spike).
 
 ## Credits
 

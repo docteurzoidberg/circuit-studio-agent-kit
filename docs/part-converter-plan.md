@@ -3,7 +3,8 @@
 Status: implemented in `tools/parts/` (TypeScript, OpenCascade in WebAssembly), 2026-11-16. First implemented in
 Python with CadQuery (`tools/c3dparts/`), removed once the port gave the same outputs (PLAN.md, D19). Part of our package (PLAN.md, D11), not of Circuit Studio. Turns a STEP model into a
 Circuit Studio part (`.c3dcomponent`) in one deterministic pass. Prototype: `spike/prepare_parts.py`,
-`spike/simplify_steps.py`, `spike/inspect_step.py`.
+`spike/simplify_steps.py`, `spike/inspect_step.py` (removed on 2026-11-17, in the history at
+[`391a99f`](https://github.com/docteurzoidberg/circuit-studio-agent-kit/tree/391a99f/spike)).
 
 ## Commands
 

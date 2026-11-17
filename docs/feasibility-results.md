@@ -28,7 +28,8 @@ Node 22 through nvm, dependencies installed locally in `circuit-studio/fork`.
 | F | Same as E with **simplified models** (user-side preparation emulated by `spike/simplify_steps.py`: adapter solids under 1 mm³ dropped, solids merged per colour, colours written into the STEP; coarser tessellation 0.25 mm / 0.7 rad) | Total 580 k → 281 k triangles, 905 → 10 meshes (adapter: 888 → 6 meshes, 407 k → 163 k triangles). Render **202 s** instead of 363 s (1.8× faster), visually equivalent. Still about 3.4× slower than real time: further decimation or profiling needed. Merging per colour loses face-level colours (dials, digits), so only parts without real colours are merged. |
 | G | Wire routing: same project as E/F, top view, wires in `auto` mode (what E/F used) versus `clean` mode (what the upstream examples use, e.g. all 28 wires of `crowded-c6-project.json`) | E/F wires looked chaotic because our generator left `routeMode` unset, so Circuit Studio used `auto` (free splines crossing the board). With `routeMode: "clean"` the same wires leave the terminals horizontally and follow orthogonal parallel lanes. Generator fix: `clean` by default. Remaining quality depends on the part layout (automatic layout, phase 5). |
 Scripts: `spike/start-export.js` (test A), `spike/build-claudemetre.js` (test B), `spike/make-open.py`
-(Open-input injection). Outputs (not versioned): `spike/output/`.
+(Open-input injection). Outputs (not versioned): `spike/output/`. The `spike/` folder was removed on 2026-11-17; its
+scripts are in the history, in [`spike/` at `391a99f`](https://github.com/docteurzoidberg/circuit-studio-agent-kit/tree/391a99f/spike).
 
 ## Findings that shape the plan
 
