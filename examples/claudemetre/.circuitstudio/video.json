@@ -1,0 +1,4 @@
+{
+ "settings": {"version": 2, "mode": "tutorial", "width": 1920, "fps": 30, "format": "mp4", "cameraStyle": "balanced", "reveal": 1.6, "hold": 0.7, "opening": 2, "closing": 2, "finalHold": 2, "labels": "minimal", "hudStyle": "futuristic", "closingLabel": "project-name", "backgroundPresetId": "dark-studio", "customSolidColor": "#182B45", "gradientStartColor": "#171B22", "gradientEndColor": "#172A44", "gradientDirection": "vertical", "gradientPosition": 50, "showFloor": false, "floorColor": "#343B45", "showGrid": false, "groundShadows": false, "fillLightIntensity": 0.55, "rimLightIntensity": 0.55, "selectedOnly": false, "keepCompleted": true, "fadeUnrelated": true, "tipGlow": true, "overrides": {}},
+ "outputs": {"poster": false}
+}

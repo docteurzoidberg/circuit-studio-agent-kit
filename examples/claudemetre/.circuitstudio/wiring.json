@@ -1,9 +1,9 @@
 {
-  "$schema": "../../schema/wiring.schema.json",
+  "$schema": "https://raw.githubusercontent.com/docteurzoidberg/circuit-studio-agent-kit/main/schema/wiring.schema.json",
   "version": 1,
   "title": "Claudemètre",
   "source": {
-    "path": "wiring.md",
+    "path": "../wiring.md",
     "sha256": "8a85b8a149b8c875211c13b45d280c498d86a075dc72acc3d4b8e3f561579fe4"
   },
   "parts": [

@@ -3,7 +3,7 @@
 What `<kit> part convert` needs to turn a STEP model into a Circuit Studio part. Written by the skill with the
 user, in `.circuitstudio/parts/<id>/part.yaml`. Nothing is guessed by the converter: every value here is a
 decision, from `part inspect`, the project's notes, a datasheet or the user. A complete example, a terminal
-adapter with 44 pins: [examples/claudemetre/parts/mrd076a/part.yaml](../../examples/claudemetre/parts/mrd076a/part.yaml).
+adapter with 44 pins: [examples/claudemetre/.circuitstudio/parts/mrd076a-esp32-s3/part.yaml](../../examples/claudemetre/.circuitstudio/parts/mrd076a-esp32-s3/part.yaml).
 
 ```yaml
 # Where the values come from (inspect, README, datasheet, assumption): a comment line or two.

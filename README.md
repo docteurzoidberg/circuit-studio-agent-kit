@@ -192,8 +192,9 @@ The study uses the wiring of [Claudemètre](https://github.com/docteurzoidberg/c
 gauge (ESPHome) built on an MRD076A screw-terminal adapter, with two SO-45 panel voltmeters, a TM1637 display, a
 WS2812B strip and a 12 V input through an LP-16 socket, a fuse and a Mini360 step-down. A study copy of its
 wiring, as the `wiring-plan` skill writes it and describing the finished build, is the showcase example
-[examples/claudemetre/wiring.md](examples/claudemetre/wiring.md), resolved into
-[examples/claudemetre/wiring.json](examples/claudemetre/wiring.json). The spike's earlier study copy is in
+[examples/claudemetre/wiring.md](examples/claudemetre/wiring.md), with the
+[`.circuitstudio/` folder](examples/claudemetre/.circuitstudio/) a project gets from the kit (what each file is,
+which stay local). The spike's earlier study copy is in
 [spike/reference-project/wiring.md](spike/reference-project/wiring.md).
 
 ## Documents

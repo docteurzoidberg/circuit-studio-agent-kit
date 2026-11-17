@@ -86,7 +86,7 @@ flowchart TD
 A fresh agent, with no knowledge of the project, ran the skill on a copy of the
 [Claudemètre](https://github.com/docteurzoidberg/claudemetre) as `wiring-parts` had left it (6 prepared parts,
 2 stand-ins): 8 parts, 16 wires and 8 placements resolved without a question, the same wiring as
-[examples/claudemetre/wiring.json](../../../examples/claudemetre/wiring.json).
+[examples/claudemetre/.circuitstudio/wiring.json](../../../examples/claudemetre/.circuitstudio/wiring.json).
 
 A third fresh agent ran the review through the kit's connection to Circuit Studio (2026-11-16): the project
 opened by itself in the owner's browser, the owner moved the step-down converter in the editor, the kit read it

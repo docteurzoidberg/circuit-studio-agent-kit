@@ -1,0 +1,11 @@
+# Written by the Circuit Studio agent kit: files of its review process.
+studio.json
+studio.log
+# The owner's choice for this project: keep local what embeds models derived from third-party STEP files (D24),
+# and what the kit regenerates.
+project.c3dproj
+build.json
+parts/*/*.c3dcomponent
+parts/*/*.png
+catalog.json
+media/

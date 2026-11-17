@@ -3,8 +3,8 @@
 `wiring.json` holds the same wiring as the document, with every name resolved: each part has a kind and a
 reference, each wire end a pin **identifier** of its part. Field reference:
 [schema/wiring.schema.json](../../schema/wiring.schema.json); a complete example:
-[examples/claudemetre/wiring.json](../../examples/claudemetre/wiring.json). It sits next to its document, so its
-`source.path` and `$schema` differ from those of a project's file (section 6).
+[examples/claudemetre/.circuitstudio/wiring.json](../../examples/claudemetre/.circuitstudio/wiring.json), where a
+project keeps it (section 6).
 
 There is no parser of the document: you read it. Read it all, the text around the tables too: it often explains
 terminal numbering or which of several equivalent pins is used.

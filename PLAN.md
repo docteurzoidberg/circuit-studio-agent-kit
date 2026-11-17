@@ -146,7 +146,7 @@ A Markdown file written by a human or by Claude, readable as documentation. Only
 The skill reads the document, not a parser: it accepts any reasonable layout, resolves each pin reference to a
 pin identifier of the part, and asks the user instead of guessing when a reference is ambiguous or unknown,
 citing the line. It writes the result to `.circuitstudio/wiring.json`, the only input of the CLI.
-Example: [examples/claudemetre/wiring.json](examples/claudemetre/wiring.json), resolved from
+Example: [examples/claudemetre/.circuitstudio/wiring.json](examples/claudemetre/.circuitstudio/wiring.json), resolved from
 [wiring.md](examples/claudemetre/wiring.md).
 
 ### Generated project and manual edits
@@ -190,7 +190,8 @@ Last update: 2026-11-16. Resume from here.
 
 - **Reference example**: [examples/claudemetre/wiring.md](examples/claudemetre/wiring.md), the typical document
   `wiring-plan` should write and the next skills consume (parts with model paths, connections, layout hints,
-  checks). The generated `claudemetre.c3dproj` stays local (it embeds models from third-party STEPs).
+  checks), with its [`.circuitstudio/`](examples/claudemetre/.circuitstudio/) folder as a project has it; the
+  generated `project.c3dproj` and parts stay local (they embed models from third-party STEPs).
 - **Findings that shape the next phases**: wires must use `routeMode: "clean"`; the clean router can block a
   connection depending on part placement, so the project builder must check `routingBlocked` and move parts;
   heavy meshes drive render time, so `wiring-parts` simplifies models; bug 3 is intended behaviour.

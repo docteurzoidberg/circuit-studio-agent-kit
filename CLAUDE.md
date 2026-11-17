@@ -17,7 +17,7 @@ next steps).
 | `tools/bridge/`, `tools/studio/` | The bridge the Circuit Studio page connects to (D23) and `studio`, the background process holding it for the review (D25); `tools/config.ts`: the user's kit settings |
 | `tools/video/` | `.circuitstudio/video.json`, the video setup kept for the project (D27): settings, outputs |
 | `tools/project/` | `build`: the Circuit Studio project from `wiring.json`; Circuit Studio's schema and route planner bundled from a local checkout into `.cache/engine/` |
-| `schema/`, `examples/` | `wiring.json` schema; the Claudemètre showcase (`wiring.md`, `wiring.json`) |
+| `schema/`, `examples/` | `wiring.json` schema; the Claudemètre showcase (`wiring.md` and the `.circuitstudio/` folder a project gets) |
 | `docs/` | Study, converter plan, upstream tracking, user guides of the skills (`docs/user-guide/skills/`) |
 
 ## Commands
