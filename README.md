@@ -168,7 +168,8 @@ Tested on a real project, the [Claudemètre](https://github.com/docteurzoidberg/
 ## What we would like to propose to Circuit Studio
 
 Small, focused pull requests, each discussed in an issue first, in this order. Details in
-[docs/tool-changes-plan.md](docs/tool-changes-plan.md). Numbers like #2 are Circuit Studio's own issue and pull
+[docs/tool-changes-plan.md](docs/tool-changes-plan.md); small features useful on their own (720p video, …) are
+tried in the fork first, in [docs/small-features-plan.md](docs/small-features-plan.md). Numbers like #2 are Circuit Studio's own issue and pull
 request numbers on GitHub.
 
 | Change | What it does | State |
@@ -177,6 +178,7 @@ request numbers on GitHub.
 | **Model references** | Built-in model references resolved from `modelId` when a project does not carry them | **Fixed upstream** (2026-11-16) by the maintainer in [`1713780`](https://github.com/arslansadiq87/circuit-studio/commit/1713780), closing issue [#3](https://github.com/arslansadiq87/circuit-studio/issues/3); our pull request [#4](https://github.com/arslansadiq87/circuit-studio/pull/4) closed as superseded |
 | **Built-in model fallback** | Saved parts whose geometry carries no model reference still use the built-in model (follow-up to [#3](https://github.com/arslansadiq87/circuit-studio/issues/3): the upstream fixture still opened with unavailable models) | **Proposed** (2026-11-16): pull request [#7](https://github.com/arslansadiq87/circuit-studio/pull/7), [comment](https://github.com/arslansadiq87/circuit-studio/issues/3#issuecomment-6928191181) on [#3](https://github.com/arslansadiq87/circuit-studio/issues/3) |
 | **Presentation in project** | Optional presentation block in the project: video settings, shot overrides, saved camera scenes | **Done** (2026-11-17): implemented by the maintainer in [`82e4bcd`](https://github.com/arslansadiq87/circuit-studio/commit/82e4bcd) after issue [#5](https://github.com/arslansadiq87/circuit-studio/issues/5); our pull request [#6](https://github.com/arslansadiq87/circuit-studio/pull/6) closed as superseded |
+| **Garbled characters** | Texts shown garbled in the app ("1920 Ã— 1080", the demo's wire labels) and two docs restored, with a test that text stays valid UTF-8 | **Proposed** (2026-11-17): pull request [#8](https://github.com/arslansadiq87/circuit-studio/pull/8) |
 | **Automation API** | A documented automation API (`window.circuitStudio`) available in production builds: open a project, list parts, check wire routes, render images and videos | **Not proposed yet**: implemented and tested, code on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/automation-api) (built on the presentation change); proposed once #6 is settled, texts in [docs/upstream-drafts/automation-api.md](docs/upstream-drafts/automation-api.md) |
 | **Bridge to the kit** | Opt-in connection of the page to a local automation client (URL parameter with its address and a token), which then drives the page through the automation API: open a project, read it back, render | **Not proposed yet**: written and tested on the [fork branch](https://github.com/docteurzoidberg/circuit-studio/tree/feat/kit-bridge) (on top of the automation API), checked end to end with the kit on 2026-11-16; proposed after the API |
 

@@ -94,6 +94,11 @@ and a 1-second video, check `ffprobe` metadata.
 
 **To agree with the maintainer.** Always-on versus opt-in (for example `?automation=1`), naming, versioning.
 
+## Small features
+
+Small changes useful on their own (720p video, garbled characters, export for Discord) are planned apart, tried in
+the fork before the owner decides on a pull request: [small-features-plan.md](small-features-plan.md).
+
 ## Bugs not covered here
 
 Bugs 3 (autosave never restored), 4 (fixture stuck loading on the hosted site), 5 (encoding of two docs) and
