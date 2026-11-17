@@ -2,11 +2,12 @@
 // (command `part catalog`, see catalog.ts).
 //
 // Until Circuit Studio exposes its catalog through the automation API (listParts), the parts are read from the
-// sources: src/model.ts is bundled with esbuild (zod and three come from this kit's dependencies) and every
-// exported component (a `*_COMPONENT` constant with a modelId and pins) is collected. The snapshot records where it
+// sources: src/model.ts is bundled with esbuild (zod, three, zustand and react come from this kit's dependencies
+// when the sources have none) and every exported component (a `*_COMPONENT` constant with a modelId and pins) is
+// collected, from model.ts and from the other modules of src/ that define one (src/arduinoUno.ts). The snapshot records where it
 // comes from (local checkout or repository, commit) so a skill can say which Circuit Studio it describes.
 import {execFileSync} from 'node:child_process';
-import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
+import {existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
@@ -27,7 +28,7 @@ export interface CatalogPin {
 export interface CatalogPart {
   modelId: string;
   name: string;
-  /** Name of the constant exported by src/model.ts. */
+  /** Name of the constant that defines the part in Circuit Studio's sources (src/model.ts or another module). */
   export: string;
   /** Whether the app offers the part in its add list; null when the sources do not say. */
   offered: boolean | null;
@@ -79,9 +80,25 @@ function git(cwd: string, ...args: string[]): string | undefined {
   }
 }
 
-/** Bundle a TypeScript module of the sources with its dependencies and import it. */
-async function loadModule(entry: string, work: string, name: string): Promise<Record<string, unknown>> {
-  const out = join(work, `${name}.mjs`);
+/**
+ * Source of a module that exports everything src/model.ts exports, plus the `*_COMPONENT` constants other modules
+ * of src/ define without model.ts re-exporting them (model.ts imports src/arduinoUno.ts's part, for instance).
+ */
+export function componentsModule(root: string): string {
+  const src = join(root, 'src');
+  const lines = [`export * from ${JSON.stringify(join(src, 'model.ts'))};`];
+  for (const file of readdirSync(src).filter(f => f.endsWith('.ts') && f !== 'model.ts').sort()) {
+    const names = [...readFileSync(join(src, file), 'utf8').matchAll(/^export const ([A-Z0-9_]+_COMPONENT)\b/gm)]
+      .map(m => m[1]);
+    if (names.length) lines.push(`export {${names.join(', ')}} from ${JSON.stringify(join(src, file))};`);
+  }
+  return lines.join('\n') + '\n';
+}
+
+/** Bundle the components of the sources (componentsModule) with their dependencies and import them. */
+async function loadModule(root: string, work: string): Promise<Record<string, unknown>> {
+  const entry = join(work, 'components.ts'), out = join(work, 'components.mjs');
+  writeFileSync(entry, componentsModule(root));
   await esbuild.build({
     entryPoints: [entry], outfile: out, bundle: true, platform: 'node', format: 'esm', logLevel: 'silent',
     nodePaths: [join(KIT_ROOT, 'node_modules')], loader: {'.json': 'json'},
@@ -98,13 +115,13 @@ function offeredModelIds(root: string, module: Record<string, unknown>): Set<str
   return new Set(list[1].split(',').map(n => module[n.trim()]).filter(isComponent).map(c => c.modelId));
 }
 
-/** Load the components exported by <root>/src/model.ts. */
+/** Load the components defined by the sources of the checkout at <root>. */
 export async function loadComponents(root: string): Promise<CatalogPart[]> {
   const entry = join(root, 'src', 'model.ts');
   if (!existsSync(entry)) throw new Error(`${root}: no src/model.ts, not a Circuit Studio checkout`);
   const work = mkdtempSync(join(tmpdir(), 'cs-catalog-'));
   try {
-    const module = await loadModule(entry, work, 'model');
+    const module = await loadModule(root, work);
     const offered = offeredModelIds(root, module);
     const parts: CatalogPart[] = [];
     const seen = new Set<string>();

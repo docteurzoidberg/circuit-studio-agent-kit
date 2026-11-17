@@ -50,7 +50,7 @@ describe('part catalog', () => {
     {skip: !existsSync(FORK) && `${FORK} not present`}, async () => {
       let r = await run(['part', 'catalog', '--from', FORK], project);
       assert.equal(r.code, 0, r.text);
-      assert.match(r.text, /written, 13 parts \(11 offered/);
+      assert.match(r.text, /written, 14 parts \(12 offered/);
       const snapshot = JSON.parse(readFileSync(join(project, '.circuitstudio', 'catalog.json'), 'utf8'));
       assert.equal(snapshot.source.path, FORK);
       r = await run(['part', 'catalog'], project);  // reuses the checkout of the previous snapshot

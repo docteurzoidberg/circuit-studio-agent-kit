@@ -23,9 +23,12 @@ What the API saves our users, to state in the PR description (noted 2026-11-16):
 
 - **Catalog without the sources**: `listParts()` gives the built-in parts and their pins from the site itself. Without
   it, the kit needs a local Circuit Studio checkout or downloads the author's repository, then compiles `src/model.ts`
-  on the user's machine, so it ships esbuild, zod and three as runtime dependencies (`tools/catalog/snapshot.mjs`).
-- **No reading of internals**: today the snapshot collects the `*_COMPONENT` exports of `model.ts` and reads the list
-  of parts the app offers from `store.ts` with a pattern; any refactor upstream breaks it. The API is a stable contract.
+  on the user's machine, so it ships esbuild, zod, three, zustand and react as runtime dependencies
+  (`tools/catalog/snapshot.ts`; zustand and react since `82e4bcd`, when `model.ts` started importing `cinematic.ts`).
+- **No reading of internals**: today the snapshot collects the `*_COMPONENT` constants of `model.ts` and of the
+  other modules of `src/` (the Arduino Uno of `a355a83` is defined in `arduinoUno.ts` and not re-exported), and reads
+  the list of parts the app offers from `store.ts` with a pattern; any refactor upstream breaks it (it already
+  happened twice). The API is a stable contract.
 - **No dev server**: driving the app (load a project, render, record) goes through `window.circuitStudio` on the hosted
   site instead of Vite module imports on a local dev server, so users need neither a clone nor `npm install` of
   Circuit Studio.

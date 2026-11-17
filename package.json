@@ -19,10 +19,12 @@
     "ajv": "^8.20.0",
     "esbuild": "^0.25.0",
     "opencascade.js": "2.0.0-beta.b5ff984",
+    "react": "^19.3.1",
     "three": "^0.186.1",
     "ws": "^8.23.0",
     "yaml": "^2.9.1",
-    "zod": "^4.6.7"
+    "zod": "^4.6.7",
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

@@ -8,6 +8,7 @@ import {existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync}
 import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import * as esbuild from 'esbuild';
+import {componentsModule} from '../catalog/snapshot.ts';
 
 const KIT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE = join(KIT_ROOT, '.cache', 'engine');
@@ -72,7 +73,7 @@ export interface CsProject {
 export interface Engine {
   /** The checkout the bundle was made from. */
   source: string;
-  /** Built-in part templates by modelId (every `*_COMPONENT` export of src/model.ts). */
+  /** Built-in part templates by modelId (every `*_COMPONENT` constant of the sources, see componentsModule). */
   templates: Map<string, CsComponent>;
   /** Validates a project as the app does on Open (throws the schema error). */
   validate(project: unknown): void;
@@ -85,8 +86,12 @@ interface Bundle {
     ProjectSchema: {parse(value: unknown): unknown};
     migrateProject(project: unknown): unknown;
   };
+  components: Record<string, unknown>;
   planAutoWires(wires: CsWire[], components: CsComponent[]): CsWire[];
 }
+
+/** Changed when the bundle's exports change, so bundles cached by an older kit are not reused. */
+const BUNDLE_LAYOUT = 'model+components+planAutoWires';
 
 /** A hash of the checkout's sources (src/, recursively), so the cache follows local edits too. */
 function sourceKey(root: string): string {
@@ -98,6 +103,7 @@ function sourceKey(root: string): string {
       else if (/\.(ts|tsx|json)$/.test(entry.name)) hash.update(path.slice(root.length)).update(readFileSync(path));
     }
   };
+  hash.update(BUNDLE_LAYOUT);
   walk(join(root, 'src'));
   return hash.digest('hex').slice(0, 16);
 }
@@ -115,9 +121,11 @@ export async function loadEngine(checkout: string): Promise<Engine> {
   const out = join(CACHE, `${sourceKey(root)}.mjs`);
   if (!existsSync(out)) {
     mkdirSync(CACHE, {recursive: true});
-    const entry = join(CACHE, `entry-${process.pid}.ts`);
+    const entry = join(CACHE, `entry-${process.pid}.ts`), components = join(CACHE, `components-${process.pid}.ts`);
+    writeFileSync(components, componentsModule(root));
     writeFileSync(entry, [
       `export * as model from ${JSON.stringify(join(root, 'src/model.ts'))};`,
+      `export * as components from ${JSON.stringify(components)};`,
       `export {planAutoWires} from ${JSON.stringify(join(root, 'src/autoRouting.ts'))};`,
     ].join('\n'));
     try {
@@ -127,11 +135,12 @@ export async function loadEngine(checkout: string): Promise<Engine> {
       });
     } finally {
       rmSync(entry, {force: true});
+      rmSync(components, {force: true});
     }
   }
   const bundle = await import(pathToFileURL(out).href) as Bundle;
   const templates = new Map<string, CsComponent>();
-  for (const [name, value] of Object.entries(bundle.model)) {
+  for (const [name, value] of Object.entries(bundle.components)) {
     if (name.endsWith('_COMPONENT') && isComponent(value) && !templates.has(value.modelId)) templates.set(value.modelId, value);
   }
   return {
