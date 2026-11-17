@@ -51,6 +51,11 @@ export interface ResolvedEnd {
   pin: string;
   /** Label of the pin in its part, when it has one. */
   label?: string;
+  /**
+   * How the name written in the document found the pin, when not by its identifier: its label, silkscreen or
+   * one of its aliases (named), or none of them (the resolution read the document's own explanations).
+   */
+  by?: 'label' | 'silkscreen' | `alias ${string}` | 'document';
 }
 
 export interface ResolvedWire {
@@ -156,8 +161,18 @@ function referenceProblems(wiring: Wiring, library: PartLibrary, pinsOf: Map<str
 
 function wireList(wiring: Wiring, pinsOf: Map<string, PinNames[] | null>): ResolvedWire[] {
   const resolved = (end: End): ResolvedEnd => {
-    const label = pinsOf.get(end.part)?.find(pin => pin.id === end.pin)?.label;
-    return {text: end.text ?? `${end.part} ${end.pin}`, part: end.part, pin: end.pin, ...(label ? {label} : {})};
+    const pin = pinsOf.get(end.part)?.find(p => p.id === end.pin);
+    const label = pin?.label;
+    let by: ResolvedEnd['by'];
+    if (end.text && pin) {
+      // The pin name as written: the reference without its part name.
+      const written = end.text.toLowerCase().startsWith(`${end.part.toLowerCase()} `) ? end.text.slice(end.part.length + 1) : end.text;
+      const same = (name?: string) => !!name && name.toLowerCase() === written.trim().toLowerCase();
+      const alias = pin.aliases?.find(same);
+      by = same(pin.id) ? undefined : same(pin.label) ? 'label' : same(pin.silkscreen) ? 'silkscreen'
+        : alias ? `alias ${alias}` : 'document';
+    }
+    return {text: end.text ?? `${end.part} ${end.pin}`, part: end.part, pin: end.pin, ...(label ? {label} : {}), ...(by ? {by} : {})};
   };
   return wiring.connections.flatMap(c => c.to.map(to =>
     ({line: c.line, ...(c.color ? {color: c.color} : {}), from: resolved(c.from), to: resolved(to)})));
@@ -210,7 +225,8 @@ function formatWires(report: WiringReport): string[] {
   const end = (e: ResolvedEnd) => {
     const resolved = `${e.part} ${e.pin}`, label = e.label && e.label !== e.pin ? ` (${e.label})` : '';
     const full = `${resolved}${label}`;
-    return e.text === resolved || e.text === full ? full : `${e.text} = ${full}`;
+    if (e.text === resolved || e.text === full) return full;
+    return `${e.text} = ${full}${e.by && e.by !== 'label' ? ` [${e.by === 'document' ? 'from the document' : `by ${e.by}`}]` : ''}`;
   };
   const rows = (report.wireList ?? []).map(w => [`${report.source ?? ''}:${w.line}`, w.color ?? '', end(w.from), end(w.to)]);
   const widths = [0, 1, 2].map(i => Math.max(0, ...rows.map(r => r[i].length)));

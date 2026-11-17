@@ -9,6 +9,7 @@ import {dirname, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {after, beforeEach, describe, test} from 'node:test';
 import {main} from '../cli.ts';
+import {engineSource} from './build.ts';
 
 const KIT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const CHECKOUT = join(KIT, 'circuit-studio', 'upstream');
@@ -73,6 +74,26 @@ const footprintsOverlap = (a: Box, b: Box) => {
   const [ax, ay] = half(a), [bx, by] = half(b);
   return Math.abs(a.position[0] - b.position[0]) < ax + bx && Math.abs(a.position[1] - b.position[1]) < ay + by;
 };
+
+// The user's kit settings never reach the tests: an empty config of their own.
+process.env.CIRCUIT_STUDIO_KIT_CONFIG = mkdtempSync(join(tmpdir(), 'kit-build-config-'));
+
+describe('engine source', () => {
+  test('takes --from, else the Circuit Studio the kit serves, else the catalog\'s checkout', () => {
+    const root = mkdtempSync(join(tmpdir(), 'kit-engine-'));
+    const served = join(root, 'served');
+    mkdirSync(join(served, 'src'), {recursive: true});
+    writeFileSync(join(served, 'src', 'autoRouting.ts'), '');
+    mkdirSync(join(root, '.circuitstudio'));
+    writeFileSync(join(root, '.circuitstudio', 'catalog.json'), JSON.stringify({source: {kind: 'local', path: root}}));
+    assert.equal(engineSource(root, {}), root);
+    writeFileSync(join(process.env.CIRCUIT_STUDIO_KIT_CONFIG!, 'config.json'), JSON.stringify({circuitStudio: {build: join(served, 'dist')}}));
+    assert.equal(engineSource(root, {}), served);
+    assert.equal(engineSource(root, {from: '/elsewhere'}), '/elsewhere');
+    rmSync(join(process.env.CIRCUIT_STUDIO_KIT_CONFIG!, 'config.json'));
+    rmSync(root, {recursive: true, force: true});
+  });
+});
 
 describe('build', {skip}, () => {
   beforeEach(() => {

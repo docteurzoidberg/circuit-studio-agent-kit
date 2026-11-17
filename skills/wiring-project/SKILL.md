@@ -25,7 +25,7 @@ Talk to the user in their language. Everything written to files is in English.
 
 | Command | What it does |
 |---|---|
-| `<kit> part pins <part id>...` | Pins of prepared parts (`.circuitstudio/parts/`) and built-in parts (`.circuitstudio/catalog.json`), one line each: identifier, label, silkscreen, aliases |
+| `<kit> part pins [<part id>...]` | Pins of prepared parts (`.circuitstudio/parts/`) and built-in parts (`.circuitstudio/catalog.json`), one line each: identifier, label, silkscreen, aliases |
 | `<kit> wiring [--wires] [--json]` | Checks `.circuitstudio/wiring.json`: schema, parts, every pin, and whether the document changed since; exit code 1 and one line per problem, with the document line. `--wires` also lists every wire as written and as resolved |
 | `<kit> studio open [--no-browser] [--wait <s>]` | Opens `.circuitstudio/project.c3dproj` in the Circuit Studio page connected to the kit (starting the kit's background process, and opening the link in the user's browser, when needed); run it again after each build to reload. Answers with the link when no page connects in time |
 | `<kit> studio sync` / `status` / `stop` | `sync` writes what the user moved or reshaped in the page into the project file; `status` says whether a page is connected and how the kit reaches Circuit Studio; `stop` ends the background process |
@@ -41,7 +41,8 @@ Talk to the user in their language. Everything written to files is in English.
   with the document: run the `part pins` check below anyway (the parts may have changed), then skip to the build
   (step 4) and say so (the pin review of step 3 was done when the file was written). Otherwise resolve again from the whole document
   (step 2): the answers the user gave earlier are in the document, so unchanged rows give the same result.
-- Run `<kit> part pins` with every *Part* identifier of the document that is not a stand-in, once. An identifier
+- Run `<kit> part pins` once: with every *Part* identifier of the document that is not a stand-in, or with none
+  when `wiring.json` is up to date with the document (it then lists that file's parts). An identifier
   it does not find is a part `wiring-parts` has not prepared yet: stop and offer to run `wiring-parts` first.
   Never invent a part or turn it into a stand-in yourself.
 
@@ -69,9 +70,9 @@ part and how it was placed, then the routes:
   from, parts lying flat turned to face them, parts standing up (panel meters) never turned; `moved`: placed as
   the user asked (`--move`); `kept`: where the user put it, in Circuit Studio or with an earlier `--move` (build
   never moves those again, until `--reset`).
-- The route planner is Circuit Studio's own, taken from the local checkout the catalog snapshot came from (its
-  path ends the routes line). The page plans the routes again when it opens the project, with its own copy of the
-  same planner: what the user sees is the page's.
+- The route planner is Circuit Studio's own (its checkout's path ends the routes line): the one the kit serves to
+  the page when there is one, so build checks the routes the page draws; else the checkout the catalog snapshot
+  came from.
 - `routes: N wires, none blocked`: every wire found a route with the planner Circuit Studio itself uses. Blocked
   wires are listed with their document line: the project is written anyway, but a blocked wire is drawn without
   a route in Circuit Studio. Never leave one: propose a move in the review (step 5).
@@ -145,8 +146,9 @@ routes). The project is done only on an explicit "ok" from the user; never take 
 
 In a few lines: the number of parts (by kind: built-in, prepared, stand-in) and of wires, the pins resolved
 through a label, an alias or the document's own explanations (grouped by part, so the user can check them:
-"Display: CLK P1, DIO P2, VCC P3, GND P4"; when step 2 was skipped, read them from `<kit> wiring --wires`, where
-`=` marks a pin found by its label or an alias), the answers written into the document (none when step 2 was
+"Display: CLK P1, DIO P2, VCC P3, GND P4"; when step 2 was skipped, read them from `<kit> wiring --wires`: `=`
+marks a pin found by another name than its identifier, `[by alias …]`, `[by silkscreen]` or `[from the document]`
+how, when not by its label), the answers written into the document (none when step 2 was
 skipped), the project file and its
 routes, and what remains:
 

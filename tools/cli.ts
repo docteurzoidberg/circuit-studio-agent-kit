@@ -2,16 +2,25 @@
 // The kit's command line. Commands follow the skills, in the order a user meets them (PLAN.md, Package); every
 // command works on the project's `.circuitstudio/` folder (tools/project.ts), except `part inspect` and
 // `part convert`, which take the file they work on.
+import {existsSync, readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
 import {catalog, describe, type CatalogOptions} from './catalog/catalog.ts';
 import {convertCommand, inspectCommand, type PartOptions} from './parts/commands.ts';
-import {projectRoot} from './project.ts';
+import {kitPath, projectRoot} from './project.ts';
 import {build, formatBuild} from './project/build.ts';
 import {runStudio, studioCommand} from './studio/studio.ts';
 import {describeSettings, parseAssignments, readVideo, VIDEO_FILE, writeVideo} from './video/video.ts';
 import {checkWiring, formatReport} from './wiring/check.ts';
 import {formatPins, PartLibrary} from './wiring/pins.ts';
+
+/** The prepared and built-in parts of `.circuitstudio/wiring.json`, for `part pins` without identifiers. */
+function wiringPartIds(root: string): string[] {
+  const file = kitPath(root, 'wiring.json');
+  if (!existsSync(file)) throw new UsageError('part pins takes part identifiers (or none, once .circuitstudio/wiring.json exists)');
+  const parts = (JSON.parse(readFileSync(file, 'utf8')) as {parts: {kind: string; ref?: string; modelId?: string}[]}).parts;
+  return [...new Set(parts.map(p => p.ref ?? p.modelId).filter((id): id is string => !!id))];
+}
 
 const USAGE = `usage: circuit-studio-agent-kit <command>
 
@@ -22,9 +31,10 @@ const USAGE = `usage: circuit-studio-agent-kit <command>
       what a STEP model holds: tree, colours, sizes, contact rows, complexity
   part convert <part.yaml> [--out <file.c3dcomponent>] [--preview <file.png> | --no-preview] [--json]
       STEP model to Circuit Studio part, from its spec; writes next to the spec by default
-  part pins <part id>... [--json]
+  part pins [<part id>...] [--json]
       pins of prepared parts (.circuitstudio/parts/) or built-in parts (.circuitstudio/catalog.json),
-      with the names a wiring document may use for them
+      with the names a wiring document may use for them; without identifiers, every part of wiring.json
+      that is not a stand-in
   wiring [--wires] [--json]
       checks .circuitstudio/wiring.json: schema, parts and pins, source document unchanged;
       exit code 1 when there are problems; --wires lists every wire as written and as resolved
@@ -92,9 +102,10 @@ async function part([sub, file, ...rest]: string[], options: Options, cwd: strin
   }
   if (sub === 'inspect' && file && !rest.length) return inspectCommand(file, options);
   if (sub === 'convert' && file && !rest.length) return convertCommand(file, options);
-  if (sub === 'pins' && file) {
-    const library = new PartLibrary(projectRoot(cwd));
-    const ids = [file, ...rest];
+  if (sub === 'pins') {
+    const root = projectRoot(cwd);
+    const library = new PartLibrary(root);
+    const ids = file ? [file, ...rest] : wiringPartIds(root);
     const missing = ids.filter(id => !library.find(id));
     if (missing.length) {
       throw new Error(`not a prepared part (.circuitstudio/parts/<id>/<id>.c3dcomponent) nor a part of the catalog `

@@ -88,6 +88,15 @@ describe('wiring tools', () => {
     assert.deepEqual(json[0].pins[0], {id: 'P1', label: 'VCC'});
   });
 
+  test('part pins without identifiers lists the parts of wiring.json that are not stand-ins', async () => {
+    write('.circuitstudio/wiring.json', wiring(DOCUMENT));
+    const {code, text} = await run(['part', 'pins']);
+    assert.equal(code, 0, text);
+    assert.match(text, /test-mcu/);
+    assert.match(text, /test-board/);
+    assert.doesNotMatch(text, /Buck/);
+  });
+
   test('part pins fails on an unknown part', async () => {
     const {code, text} = await run(['part', 'pins', 'test-board', 'nope']);
     assert.equal(code, 1);
@@ -112,6 +121,17 @@ describe('wiring tools', () => {
       '  wiring.md:14  blue   MCU J1-3 (GPIO4)  ->  Sensor P2 (DATA)',
       'ok',
     ]);
+  });
+
+  test('wiring --wires says when a pin was found by an alias, its silkscreen or the document', async () => {
+    const w = wiring(DOCUMENT);
+    w.connections[2].from = {part: 'MCU', pin: 'J1-3', text: 'MCU IO4'} as typeof w.connections[2]['from'];
+    w.connections[2].to = [{part: 'Sensor', pin: 'P2', text: 'Sensor signal'}];
+    w.connections[1].from = {part: 'MCU', pin: 'J1-2', text: 'MCU GND'} as typeof w.connections[1]['from'];
+    write('.circuitstudio/wiring.json', w);
+    const lines = (await run(['wiring', '--wires'])).text.split('\n');
+    assert.match(lines.find(l => l.includes(':14'))!, /MCU IO4 = MCU J1-3 \(GPIO4\) \[by alias IO4\]  ->  Sensor signal = Sensor P2 \(DATA\) \[from the document\]$/);
+    assert.match(lines.find(l => l.includes(':13'))!, /MCU GND = MCU J1-2 \(GND\) {2,}->/, 'found by its label: nothing more to say');
   });
 
   test('wiring reports a missing file', async () => {

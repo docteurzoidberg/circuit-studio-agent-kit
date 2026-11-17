@@ -14,7 +14,8 @@
 //   what differs from them counts as an edit; the rest is placed again (a new layout hint applies). The document
 //   stays the source of what is connected and in which colour.
 import {existsSync, readFileSync, writeFileSync} from 'node:fs';
-import {relative} from 'node:path';
+import {dirname, join, relative} from 'node:path';
+import {readConfig} from '../config.ts';
 import type {CatalogSnapshot} from '../catalog/snapshot.ts';
 import {kitPath} from '../project.ts';
 import {readVideo} from '../video/video.ts';
@@ -312,8 +313,16 @@ function camera(components: CsComponent[]): CsProject['camera'] {
 
 // --- Build.
 
-function engineSource(root: string, options: BuildOptions): string {
+/**
+ * The Circuit Studio checkout whose planner build uses: `--from`, else the one the kit serves to the page (so the
+ * routes build checks are the ones the page draws), else the one the catalog snapshot came from.
+ */
+export function engineSource(root: string, options: BuildOptions): string {
   if (options.from) return options.from;
+  const served = readConfig().circuitStudio?.build;
+  // The configured build is a checkout, or its dist/ folder.
+  const checkout = served && [served, dirname(served)].find(dir => existsSync(join(dir, 'src', 'autoRouting.ts')));
+  if (checkout) return checkout;
   const file = kitPath(root, 'catalog.json');
   const snapshot = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as CatalogSnapshot : null;
   if (snapshot?.source.kind === 'local' && existsSync(snapshot.source.path)) return snapshot.source.path;

@@ -14,7 +14,8 @@ Circuit Studio project `.circuitstudio/project.c3dproj` and reviews it with you 
 Until the kit's package exists, copy [skills/wiring-project/](../../../skills/wiring-project/) into your
 project's `.claude/skills/` folder (or `~/.claude/skills/`), and keep a checkout of the kit: the skill runs its
 command line with Node 22 (`node <kit>/tools/cli.ts ...`). Building the project also needs a local copy of Circuit
-Studio for now (its route planner comes from its sources): the one `wiring-parts` took the catalog from, or one
+Studio for now (its route planner comes from its sources): the one the kit opens in your browser, else the one
+`wiring-parts` took the catalog from, or one
 you name. Then ask for it in your own words ("turn my wiring into
 the Circuit Studio project") or type `/wiring-project`.
 
